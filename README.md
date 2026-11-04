@@ -90,6 +90,9 @@ All variables are server side only and are never sent to the browser. The full l
 | `CRON_SECRET` | yes | Bearer token that Vercel Cron sends to `/api/cron/sla` |
 | `MCP_TOKEN` | for MCP | Bearer token required by `/api/mcp` |
 | `ALERT_WEBHOOK_URL` | no | Slack, Discord or Teams incoming webhook for P1 alerts |
+| `ALERT_FORMAT`, `PUBLIC_APP_URL` | no | Alert body format (auto by host, Teams gets an Adaptive Card) and the dashboard link on Teams cards |
+| `RMM_WEBHOOK_SECRET`, `RMM_DEDUP_MINUTES` | no | HMAC key for `/api/webhooks/rmm` (falls back to `WEBHOOK_SECRET`) and the repeat window, default 30 |
+| `PSA_PROVIDER` plus `HALOPSA_*` or `AUTOTASK_*` | no | Creates triaged tickets in HaloPSA or Autotask. Off by default, see [docs/level2/msp-integrations.md](docs/level2/msp-integrations.md) |
 | `IP_HASH_SALT` | yes | Salt for hashing client IPs (raw IPs are never stored) |
 | `DEMO_HOURLY_LIMIT` | no | Public portal tickets per IP per hour, default 6 |
 | `DEMO_DAILY_LIMIT` | no | Public portal tickets per day across all users, default 300 |
@@ -109,6 +112,7 @@ All endpoints are under `/api` and speak JSON.
 | `POST /api/demo/tickets` | rate limited | Public portal submission, triaged synchronously |
 | `POST /api/webhooks/inbound` | HMAC | Generic signed webhook for n8n, Make, Zapier or a PSA |
 | `POST /api/webhooks/email` | HMAC | Postmark style inbound email |
+| `POST /api/webhooks/rmm` | HMAC | NinjaOne and Datto RMM alerts through the n8n relay, repeats collapsed into one ticket |
 | `GET /api/webhooks/whatsapp` | verify token | Meta subscription handshake |
 | `POST /api/webhooks/whatsapp` | `X-Hub-Signature-256` | WhatsApp Cloud API messages, one ticket per message |
 | `POST /api/chat` | rate limited | Copilot agent with read-only tools |
@@ -131,6 +135,9 @@ triageops/
   mcp.py                   MCP JSON-RPC handler
   security.py              HMAC, replay window, masking, IP hashing, rate limiter
   alerts.py                outbound Slack, Discord or Teams webhook
+  alert_formats.py         per host alert bodies, Teams Adaptive Card
+  rmm/                     NinjaOne and Datto RMM parsers, de-duplication, /api/webhooks/rmm
+  psa/                     HaloPSA and Autotask adapters, retries, sync after triage
   store.py, db.py          every SQL statement, connection helper
   config.py, taxonomy.py   settings from env vars, shared vocabulary
   samples.py               eight sample tickets from fictional UK SMEs
@@ -141,7 +148,8 @@ supabase/functions/embed/  gte-small embedding Edge Function
 src/                       React dashboard, ticket drawer, copilot, /build page
 docs/BUILD.md              the ten stage build document
 deploy/                    Docker, nginx, Certbot, systemd, VPS bootstrap, backups
-n8n/                       importable Gmail to TriageOps workflow
+n8n/                       importable Gmail and RMM alert workflows
+docs/level2/               integration guides (RMM, PSA, Teams)
 .github/workflows/ci.yml   lint, tests, frontend build
 vercel.json                regions, rewrites, cron, headers
 ```

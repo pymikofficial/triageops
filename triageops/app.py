@@ -37,6 +37,7 @@ from . import (
 from .config import VERSION, settings
 from .db import Connection, DatabaseUnavailable
 from .rag import EmbeddingError
+from .rmm import routes as rmm_routes
 from .schemas import ChatIn, DemoTicketIn, InboundTicketIn, PostmarkInboundIn
 from .security import (
     MCP_CORS_HEADERS,
@@ -53,6 +54,8 @@ from .security import (
 from .taxonomy import CHANNELS, PRIORITIES, STATUSES
 
 observability.configure_logging()
+# httpx logs every request URL at INFO. Slack, Discord and Teams webhook URLs are secrets, so keep them out.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("triageops")
 
 MAX_BODY_BYTES = 64 * 1024
@@ -68,6 +71,8 @@ app = FastAPI(
     redoc_url=None,
     openapi_url="/api/openapi.json",
 )
+# RMM alert intake lives in its own module, see triageops/rmm/routes.py.
+app.include_router(rmm_routes.router)
 chat_limiter = SlidingWindowLimiter(limit=settings.chat_hourly_limit, window_seconds=3600)
 
 Model = TypeVar("Model", bound=BaseModel)

@@ -27,6 +27,7 @@ from . import alerts, rag, rules, store
 from .config import settings
 from .db import Connection
 from .decision import REPLY_MAX_WORDS, SUMMARY_MAX_WORDS, TriageDecision, trim_words
+from .psa import sync as psa_sync
 from .rag import EmbeddingError, KbMatch
 from .rules import Event
 from .schemas import InboundTicket
@@ -174,8 +175,28 @@ def _escape(text: str) -> str:
     return text.replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _hint_block(priority_hint: str | None, reason: str | None) -> str:
+    """Context from a verified integration, kept outside the untrusted ticket block."""
+    if priority_hint not in PRIORITIES:
+        return ""
+    source = _escape(reason or "a verified integration")
+    return (
+        "<priority_hint>\n"
+        f"{priority_hint}, suggested by {source}. This came from a signed integration, not from the customer. "
+        "Treat it as a starting point only and judge impact from the facts in the ticket.\n"
+        "</priority_hint>\n\n"
+    )
+
+
 def build_user_message(
-    *, channel: str, customer: str | None, subject: str, body: str, articles: list[KbMatch]
+    *,
+    channel: str,
+    customer: str | None,
+    subject: str,
+    body: str,
+    articles: list[KbMatch],
+    priority_hint: str | None = None,
+    priority_hint_reason: str | None = None,
 ) -> str:
     if articles:
         kb = "\n".join(
@@ -186,6 +207,7 @@ def build_user_message(
         kb = "No articles were retrieved."
     return (
         f"<knowledge_base>\n{kb}\n</knowledge_base>\n\n"
+        f"{_hint_block(priority_hint, priority_hint_reason)}"
         "<ticket>\n"
         f"<channel>{channel}</channel>\n"
         f"<customer>{_escape(customer or 'unknown')}</customer>\n"
@@ -224,7 +246,14 @@ def parse_response(response: Any, *, latency_ms: int) -> TriageResult:
 
 
 def classify_with_claude(
-    *, channel: str, customer: str | None, subject: str, body: str, articles: list[KbMatch]
+    *,
+    channel: str,
+    customer: str | None,
+    subject: str,
+    body: str,
+    articles: list[KbMatch],
+    priority_hint: str | None = None,
+    priority_hint_reason: str | None = None,
 ) -> TriageResult:
     if not settings.anthropic_api_key:
         raise TriageError("ANTHROPIC_API_KEY is not set")
@@ -240,7 +269,13 @@ def classify_with_claude(
             {
                 "role": "user",
                 "content": build_user_message(
-                    channel=channel, customer=customer, subject=subject, body=body, articles=articles
+                    channel=channel,
+                    customer=customer,
+                    subject=subject,
+                    body=body,
+                    articles=articles,
+                    priority_hint=priority_hint,
+                    priority_hint_reason=priority_hint_reason,
                 ),
             }
         ],
@@ -272,11 +307,13 @@ def process_ticket(conn: Connection, inbound: InboundTicket) -> TicketBundle:
 
     ticket = _save(conn, inbound)
     try:
-        ticket = _triage(conn, ticket)
+        ticket = _triage(conn, ticket, inbound)
     except Exception as exc:
         logger.exception("triage pipeline failed ref=%s", ticket["ref"])
         _mark_failed(conn, ticket["id"], exc)
         raise
+    # Off unless PSA_PROVIDER is set. Never raises, the outcome is written as an event.
+    psa_sync.sync_after_triage(conn, ticket, is_demo=inbound.is_demo)
     return TicketBundle(ticket, store.list_events(conn, ticket["id"]))
 
 
@@ -294,9 +331,11 @@ def _save(conn: Connection, inbound: InboundTicket) -> dict[str, Any]:
         client_hash=inbound.client_hash,
         is_demo=inbound.is_demo,
     )
-    received: dict[str, Any] = {"channel": inbound.channel}
+    received: dict[str, Any] = {**(inbound.source_detail or {}), "channel": inbound.channel}
     if inbound.source_id:
         received["source_id"] = inbound.source_id
+    if inbound.priority_hint:
+        received["priority_hint"] = inbound.priority_hint
     events: list[Event] = [("received", received)]
     if redactions:
         events.append(
@@ -320,7 +359,11 @@ def _retrieve(conn: Connection, ticket: dict[str, Any], events: list[Event]) -> 
     return articles
 
 
-def _classify(ticket: dict[str, Any], articles: list[KbMatch], events: list[Event]) -> TriageResult:
+def _classify(
+    ticket: dict[str, Any], articles: list[KbMatch], events: list[Event], inbound: InboundTicket | None = None
+) -> TriageResult:
+    hint = inbound.priority_hint if inbound and inbound.priority_hint in PRIORITIES else None
+    reason = inbound.priority_hint_reason if hint and inbound else None
     try:
         return classify_with_claude(
             channel=ticket["channel"],
@@ -328,6 +371,8 @@ def _classify(ticket: dict[str, Any], articles: list[KbMatch], events: list[Even
             subject=ticket["subject"],
             body=ticket["body"],
             articles=articles,
+            priority_hint=hint,
+            priority_hint_reason=reason,
         )
     except Exception as exc:  # Any AI failure degrades to keyword rules so the ticket is still triaged.
         logger.warning("claude triage failed ref=%s error=%r", ticket["ref"], exc)
@@ -336,13 +381,27 @@ def _classify(ticket: dict[str, Any], articles: list[KbMatch], events: list[Even
         )
         started = time.perf_counter()
         decision = rules.heuristic_triage(ticket["subject"], ticket["body"], articles)
+        if hint and PRIORITIES.index(hint) < PRIORITIES.index(decision.priority):
+            # Keyword rules cannot read an RMM severity, so a verified hint may raise the fallback priority.
+            events.append(
+                (
+                    "rule_applied",
+                    {
+                        "rule": "priority_hint_fallback",
+                        "description": "The keyword fallback used the priority suggested by the verified integration",
+                        "from": decision.priority,
+                        "to": hint,
+                    },
+                )
+            )
+            decision = decision.model_copy(update={"priority": hint})
         return TriageResult(decision, model=FALLBACK_MODEL, latency_ms=round((time.perf_counter() - started) * 1000))
 
 
-def _triage(conn: Connection, ticket: dict[str, Any]) -> dict[str, Any]:
+def _triage(conn: Connection, ticket: dict[str, Any], inbound: InboundTicket | None = None) -> dict[str, Any]:
     events: list[Event] = []
     articles = _retrieve(conn, ticket, events)
-    result = _classify(ticket, articles, events)
+    result = _classify(ticket, articles, events, inbound)
     proposed = result.decision
 
     triaged: dict[str, Any] = {

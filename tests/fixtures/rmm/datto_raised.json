@@ -1,0 +1,21 @@
+{
+  "source": "datto_rmm",
+  "event": "triggered",
+  "alert_uid": "6f1c2b9e-3a4d-4e8f-9b21-7c5d0a3e8f41",
+  "priority": "Critical",
+  "alert_type": "Disk Usage",
+  "alert_category": "Performance",
+  "alert": "Disk usage on C: above 90%",
+  "alert_message": "Disk C: has 4.2 GB free (95.8% used)",
+  "device_uid": "0d8e5c1a-77b2-4f0e-a6c4-2b9f31d4e7aa",
+  "device_id": "1874523",
+  "device_hostname": "ACME-FS01",
+  "device_ip": "203.0.113.24",
+  "device_os": "Microsoft Windows Server 2019 Standard",
+  "last_user": "ACME\\jsmith",
+  "site_uid": "9a3b7e2c-1f44-4c6d-8e0a-55d2b1c9f310",
+  "site_id": "402117",
+  "site_name": "Acme Ltd - Head Office",
+  "platform": "merlot",
+  "alert_url": "https://merlot.rmm.datto.com/alert/6f1c2b9e-3a4d-4e8f-9b21-7c5d0a3e8f41"
+}

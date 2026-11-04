@@ -33,13 +33,14 @@ export const STATUS_LABEL = {
   failed: 'Failed',
 };
 
-export const CHANNELS = ['email', 'whatsapp', 'portal', 'webhook'];
+export const CHANNELS = ['email', 'whatsapp', 'portal', 'webhook', 'rmm'];
 
 export const CHANNEL_LABEL = {
   email: 'Email',
   whatsapp: 'WhatsApp',
   portal: 'Portal',
   webhook: 'Webhook',
+  rmm: 'RMM alert',
 };
 
 export const SENTIMENT_LABEL = {

@@ -35,7 +35,7 @@ Each line is one ticket with `id`, `channel`, `customer`, `requester`, `subject`
 | P1 kinds | ransomware (4, one from an RMM webhook), confirmed breach or exposure (3), site or tenant wide outage (4), payment fraud (2), data loss (1) |
 | Prompt injection attempts | 9 in 9 styles: direct override, fake system header, tag break-out, embedded JSON, claimed authority, role play, prompt extraction, hidden HTML comment, and an instruction to downgrade real ransomware |
 | Tricky cases | calm tone but critical (2), angry tone but low impact (3), mixed issues (2), and a legitimate "developer mode" request that must not be flagged |
-| Categories, teams, channels | all nine, all five, all four |
+| Categories, teams, channels | all nine, all five, and the four channels people write in (RMM alerts are machine generated and have their own fixtures under `tests/fixtures/rmm`) |
 
 Labels follow the system prompt's priority matrix and team routing, and tests check they never contradict the business rules (for example, a Security label is never below P2). Ticket text is fictional, uses the Ofcom drama phone range and follows the house style.
 

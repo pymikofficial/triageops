@@ -18,6 +18,11 @@ export const EVENT_LABEL = {
   reply_approved: 'Reply approved by an analyst',
   resolved: 'Resolved by an analyst',
   reopened: 'Reopened by an analyst',
+  rmm_repeat: 'Repeat RMM alert',
+  rmm_reset: 'RMM alert cleared',
+  psa_synced: 'Created in PSA',
+  psa_skipped: 'PSA sync skipped',
+  psa_failed: 'PSA sync failed',
 };
 
 export const EVENT_TONE = {
@@ -36,6 +41,11 @@ export const EVENT_TONE = {
   reply_approved: 'accent',
   resolved: 'ok',
   reopened: 'warn',
+  rmm_repeat: 'warn',
+  rmm_reset: 'neutral',
+  psa_synced: 'accent',
+  psa_skipped: 'muted',
+  psa_failed: 'danger',
 };
 
 // Fact labels that humanise would get wrong.
