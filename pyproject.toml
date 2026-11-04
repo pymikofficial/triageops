@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triageops"
+version = "1.0.0"
+description = "AI service desk for IT MSPs, built with Claude"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Soumik Chatterjee" }]
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi==0.162.0",
+  "anthropic==2.4.0",
+  "psycopg[binary]==3.3.7",
+  "pydantic==2.13.5",
+  "httpx==0.28.1",
+]
+
+[tool.setuptools]
+packages = ["triageops"]
