@@ -1,0 +1,211 @@
+{
+  "name": "Gmail to TriageOps (signed webhook, P1 to Slack)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Gmail to TriageOps\n\nPolls a Gmail label every minute, signs each unread email with HMAC SHA-256 and posts it to the TriageOps signed webhook. P1 results go to Slack.\n\n**Before activating**\n1. Set the n8n environment variables `TRIAGEOPS_WEBHOOK_SECRET` (same value as `WEBHOOK_SECRET` on the server), `NODE_FUNCTION_ALLOW_BUILTIN=crypto` and `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, then restart n8n.\n2. Replace `<host>` in the HTTP Request node with the TriageOps hostname.\n3. Pick a Gmail OAuth2 credential and a Slack credential.\n4. Create the Gmail label `support` (or edit the search filter).\n\nThe timestamp is checked server side with a 300 second window, so retries are capped at three attempts five seconds apart.",
+        "height": 420,
+        "width": 460,
+        "color": 5
+      },
+      "id": "568276fb-028c-420b-8211-15f1c3b532c6",
+      "name": "Setup notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ],
+          "q": "label:support",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "d7cca1e0-2bbb-4f82-9a59-baaa94f1af22",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Builds a TriageOps ticket from each Gmail message and signs it.\n// Signature = \"sha256=\" + hex HMAC-SHA256 of \"{timestamp}.{rawBody}\" with TRIAGEOPS_WEBHOOK_SECRET.\n// The HTTP Request node sends rawBody byte for byte, so the server computes the same HMAC.\n// n8n settings needed: NODE_FUNCTION_ALLOW_BUILTIN=crypto and N8N_BLOCK_ENV_ACCESS_IN_NODE=false.\nconst crypto = require('crypto');\n\nconst secret = $env.TRIAGEOPS_WEBHOOK_SECRET;\nif (!secret) {\n  throw new Error('TRIAGEOPS_WEBHOOK_SECRET is not set in the n8n environment');\n}\n\n// Map sender domains to MSP client names. Unknown domains fall back to the domain itself.\nconst CUSTOMERS = {\n  'harbourdental.co.uk': 'Harbour Dental Group',\n  'northgateaccountancy.co.uk': 'Northgate Accountancy',\n};\n\nreturn $input.all().map((item) => {\n  const mail = item.json;\n  const sender = (mail.from && mail.from.value && mail.from.value[0]) || {};\n  const address = String(sender.address || 'unknown@unknown.invalid').toLowerCase();\n  const domain = address.split('@')[1] || 'unknown';\n\n  let subject = String(mail.subject || '').replace(/\\s+/g, ' ').trim();\n  if (subject.length < 3) subject = `Email from ${address}`;\n  subject = subject.slice(0, 200);\n\n  let body = String(mail.text || mail.snippet || '').trim();\n  if (body.length < 10) body = `${subject}\\n\\n${body}`.trim();\n  if (body.length < 10) body = `${body} (no message body)`;\n  body = body.slice(0, 4000);\n\n  const payload = {\n    channel: 'email',\n    customer: CUSTOMERS[domain] || domain,\n    requester: address,\n    subject,\n    body,\n    // Lets TriageOps return the original ticket if n8n retries the same email.\n    external_id: mail.id ? `gmail:${mail.id}` : undefined,\n  };\n\n  const rawBody = JSON.stringify(payload);\n  const timestamp = String(Math.floor(Date.now() / 1000));\n  const signature = 'sha256=' + crypto\n    .createHmac('sha256', secret)\n    .update(`${timestamp}.${rawBody}`, 'utf8')\n    .digest('hex');\n\n  return { json: { rawBody, timestamp, signature, gmailMessageId: mail.id } };\n});\n"
+      },
+      "id": "63c35fd6-7fdb-48d1-86e9-248492d427bc",
+      "name": "Build signed payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://<host>/api/webhooks/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-TriageOps-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "X-TriageOps-Signature",
+              "value": "={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.rawBody }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "2b38e706-31f1-49ae-99b4-6089a15e1d09",
+      "name": "POST to TriageOps",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "7560d736-2f29-459d-a6b5-82a24fb37ac9",
+              "leftValue": "={{ $json.ticket.priority }}",
+              "rightValue": "P1",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4d9b13cb-476e-4e9f-8223-8b413d5399e7",
+      "name": "Is P1?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#it-p1-alerts",
+          "mode": "name"
+        },
+        "text": "=P1 ticket {{ $json.ticket.ref }} for {{ $json.ticket.customer || 'unknown customer' }}\n{{ $json.ticket.subject }}\nCategory {{ $json.ticket.category }}, team {{ $json.ticket.team }}, SLA due {{ $json.ticket.sla_due_at }}\n{{ $json.ticket.summary }}",
+        "otherOptions": {}
+      },
+      "id": "53c935a3-472c-4c47-8380-71ed81da206b",
+      "name": "Alert Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build signed payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build signed payload": {
+      "main": [
+        [
+          {
+            "node": "POST to TriageOps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to TriageOps": {
+      "main": [
+        [
+          {
+            "node": "Is P1?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is P1?": {
+      "main": [
+        [
+          {
+            "node": "Alert Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

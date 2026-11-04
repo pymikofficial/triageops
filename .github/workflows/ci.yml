@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest ruff
+
+      - name: Lint
+        run: ruff check triageops tests --select E,F,I --ignore E501
+
+      - name: Tests (no network, fake DB and fake Claude)
+        run: pytest -q
+
+  frontend:
+    name: Frontend (vite build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: Deploy
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # Production deploys are done by the Vercel Git integration, not by this workflow.
+      # Vercel watches the main branch, builds the Vite frontend and the Python function
+      # (api/index.py, region lhr1) and promotes the build when it succeeds. That means no
+      # Vercel token is stored in GitHub, and this job only records that the gates passed.
+      # Vercel also builds a preview URL for every pull request.
+      - name: Gates passed, Vercel Git integration deploys main
+        run: |
+          echo "Lint, tests and frontend build passed for ${GITHUB_SHA}."
+          echo "Vercel builds and promotes this commit through its Git integration."
+
+      # Optional, for the VPS kit in deploy/. Add three repository secrets first:
+      #   VPS_HOST         server hostname or IP
+      #   VPS_SSH_KEY      private key of a dedicated CI key (its public half in ~deploy/.ssh/authorized_keys)
+      #   VPS_KNOWN_HOSTS  output of "ssh-keyscan -t ed25519 <host>", so the host key is pinned
+      # Then uncomment the step below.
+      #
+      # - name: Deploy to VPS over SSH
+      #   env:
+      #     VPS_HOST: ${{ secrets.VPS_HOST }}
+      #     VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      #     VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+      #   run: |
+      #     install -m 700 -d ~/.ssh
+      #     printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+      #     chmod 600 ~/.ssh/id_ed25519
+      #     printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      #     ssh -o BatchMode=yes deploy@"$VPS_HOST" \
+      #       'set -e; cd /opt/triageops; git pull --ff-only; cd deploy; docker compose up -d --build --remove-orphans; docker compose ps'

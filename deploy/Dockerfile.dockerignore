@@ -1,0 +1,19 @@
+# BuildKit reads <Dockerfile>.dockerignore next to the Dockerfile.
+# Keeps secrets, local state and heavy folders out of the build context.
+.git
+.github
+.vercel
+.venv
+venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+node_modules
+dist
+.env
+**/.env
+.env.*
+!.env.example
+deploy/data
+*.sql.gz

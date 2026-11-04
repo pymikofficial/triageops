@@ -1,0 +1,67 @@
+# TriageOps API without Docker: uvicorn under a dedicated system user, behind host nginx.
+#
+# One time setup (as root):
+#   useradd --system --home-dir /opt/triageops --shell /usr/sbin/nologin triageops
+#   python3.12 -m venv /opt/triageops/.venv
+#   /opt/triageops/.venv/bin/pip install -r /opt/triageops/requirements.txt "uvicorn[standard]"
+#   install -o root -g root -m 600 /path/to/filled.env /opt/triageops/.env
+#   cp deploy/systemd/triageops.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now triageops
+#
+# The .env file stays root:root 600. systemd reads EnvironmentFile as root before it
+# drops to the triageops user, so the service process never needs read access to it.
+
+[Unit]
+Description=TriageOps API (FastAPI on uvicorn)
+Documentation=https://github.com/pymikofficial/triageops
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=triageops
+Group=triageops
+WorkingDirectory=/opt/triageops
+EnvironmentFile=/opt/triageops/.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/triageops/.venv/bin/uvicorn triageops.app:app \
+    --host 127.0.0.1 --port 8000 --workers 2 \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-server-header
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+LimitNOFILE=65536
+
+# ---------- hardening ----------
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RemoveIPC=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+# MemoryDenyWriteExecute is left off on purpose. cffi based wheels can need W+X pages.
+UMask=0077
+# The app writes nothing to disk. If that changes, grant one folder explicitly:
+# ReadWritePaths=/var/lib/triageops
+
+[Install]
+WantedBy=multi-user.target

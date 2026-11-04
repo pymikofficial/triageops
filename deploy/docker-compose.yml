@@ -1,0 +1,97 @@
+# TriageOps on a single VPS: FastAPI app, nginx (TLS + static SPA), certbot renewals.
+#
+# Two env files, on purpose:
+#   ../.env       app secrets (ANTHROPIC_API_KEY, DATABASE_URLS, ...), chmod 600, read only by the app service
+#   ./.env        compose settings (DOMAIN, LETSENCRYPT_EMAIL), no secrets, used for ${...} interpolation
+#
+# Run from this folder:  docker compose up -d --build
+
+name: triageops
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: app
+    image: triageops-app:latest
+    env_file:
+      - ../.env
+    expose:
+      - "8000"            # internal network only, never published on the host
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - internal
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: web
+    image: triageops-web:latest
+    depends_on:
+      app:
+        condition: service_started
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in deploy/.env}
+      APP_UPSTREAM: app:8000
+      WEB_ROOT: /usr/share/nginx/html
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    # Reload every 6 hours so renewed certificates are picked up without downtime.
+    command: ["/bin/sh", "-c", "while :; do sleep 6h; nginx -s reload; done & exec /docker-entrypoint.sh nginx -g 'daemon off;'"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/nginx-health"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - internal
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
+    # Tries renewal twice a day. certbot only renews within 30 days of expiry.
+    entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+networks:
+  internal:
+    driver: bridge

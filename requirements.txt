@@ -1,0 +1,6 @@
+# Runtime dependencies for the Vercel Python function. Kept small for cold starts.
+fastapi==0.162.0
+anthropic==2.4.0
+psycopg[binary]==3.3.7
+pydantic==2.13.5
+httpx==0.28.1
