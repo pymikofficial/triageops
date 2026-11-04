@@ -7,6 +7,7 @@ semantics as the SQL. ``install_integration_store`` swaps it in, like the
 that calls it.
 """
 
+import hashlib
 import json
 import time
 from contextlib import contextmanager
@@ -134,3 +135,8 @@ def install_integration_store(monkeypatch: pytest.MonkeyPatch) -> IntegrationFak
     monkeypatch.setattr(db, "connect", fake_connect)
     monkeypatch.setattr(rag, "search", lambda conn, text, count=3: [])
     return fake
+
+
+def hashed_key(raw: str) -> str:
+    """The stored RMM de-duplication key for ``vendor:device:condition`` text that is already normalised."""
+    return f"{raw.split(':', 1)[0]}:sha256:{hashlib.sha256(raw.encode()).hexdigest()[:40]}"

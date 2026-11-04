@@ -338,3 +338,22 @@ def test_error_messages_never_hold_secrets_or_the_token() -> None:
     message = caught.value.message
     assert HALO_CLIENT_SECRET not in message and "halo-token-1" not in message
     assert len(message) < 300
+
+
+def test_token_timeout_is_not_reported_as_a_ticket_that_may_exist() -> None:
+    """The ticket was never sent, so the failure must not send a person looking for it."""
+    sent: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(request.url.path)
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    clock = FakeClock()
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    adapter = HaloPsaAdapter(halo_settings(), client=client, sleep=clock.sleep, clock=clock)
+    with pytest.raises(PsaError) as caught:
+        adapter.create_ticket(ticket())
+    assert "/api/Tickets" not in sent and set(sent) == {"/auth/token"}
+    assert caught.value.ambiguous is False
+    assert "the ticket was not sent" in caught.value.message and caught.value.retryable
+    assert "may already exist" not in caught.value.message

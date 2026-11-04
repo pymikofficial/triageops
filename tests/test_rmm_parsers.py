@@ -1,11 +1,12 @@
 """NinjaOne and Datto RMM parsing, severity mapping, de-duplication keys and ticket text."""
 
+import json
 import re
 from datetime import UTC, datetime
 from typing import Any
 
 import pytest
-from fakes_integrations import load_rmm_fixture
+from fakes_integrations import hashed_key, load_rmm_fixture
 
 from triageops.rmm.models import (
     SEVERITY_TO_PRIORITY,
@@ -74,7 +75,7 @@ def test_ninjaone_triggered_activity() -> None:
     assert (alert.severity, priority_hint(alert)) == ("major", "P2")
     assert priority_hint_reason(alert) == "NinjaOne severity Major"
     assert alert.occurred_at == datetime(2026, 11, 4, 15, 12, 17, 418226, tzinfo=UTC)
-    assert alert.dedupe_key == "ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614"
+    assert alert.dedupe_key == hashed_key("ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614")
 
 
 def test_ninjaone_reset_shares_the_key_but_not_the_delivery_id() -> None:
@@ -244,7 +245,7 @@ def test_datto_raised_template() -> None:
     assert (alert.severity, priority_hint(alert)) == ("critical", "P1")
     assert priority_hint_reason(alert) == "Datto RMM priority Critical"
     assert alert.occurred_at is None
-    assert alert.dedupe_key == "datto:0d8e5c1a-77b2-4f0e-a6c4-2b9f31d4e7aa:disk usage/performance"
+    assert alert.dedupe_key == hashed_key("datto:0d8e5c1a-77b2-4f0e-a6c4-2b9f31d4e7aa:disk usage/performance")
 
 
 def test_datto_resolved_template_is_a_reset_with_its_own_delivery_id() -> None:
@@ -457,7 +458,7 @@ def test_severity_to_priority_table() -> None:
 
 def test_dedupe_key_is_normalised() -> None:
     alert = make_alert(device_id="ACME-FS01", condition="  Disk \t Free\n\nSpace  ")
-    assert alert.dedupe_key == "ninjaone:acme-fs01: disk free space"
+    assert alert.dedupe_key == hashed_key("ninjaone:acme-fs01: disk free space")
     assert make_alert(condition="DISK free SPACE").dedupe_key == make_alert(condition="disk  free space").dedupe_key
 
 
@@ -468,6 +469,13 @@ def test_long_dedupe_keys_are_hashed() -> None:
     assert long_one.dedupe_key == make_alert(condition="C" * 300).dedupe_key
     assert long_one.dedupe_key != other.dedupe_key
     assert len(make_alert(condition="c" * 180).dedupe_key) <= 200
+
+
+def test_dedupe_key_never_holds_alert_text() -> None:
+    secret_text = "Backup failed password=Sup3rS3cretPw! token ghp_abcdefghijklmnopqrstuvwxyz0123456789AB"
+    key = make_alert(condition=secret_text.lower()).dedupe_key
+    assert re.fullmatch(r"ninjaone:sha256:[0-9a-f]{40}", key)
+    assert "sup3r" not in key and "ghp_" not in key
 
 
 def test_source_id_needs_an_alert_id() -> None:
@@ -488,7 +496,7 @@ def test_inbound_ticket_from_a_ninjaone_alert() -> None:
     assert inbound.priority_hint == "P2"
     assert inbound.priority_hint_reason == "NinjaOne severity Major"
     assert inbound.source_detail == {
-        "rmm_key": "ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614",
+        "rmm_key": hashed_key("ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614"),
         "vendor": "ninjaone",
         "device": "ACME-FS01",
         "condition": "Disk Free Space < 10%",
@@ -529,3 +537,19 @@ def test_subject_and_body_limits() -> None:
     assert bare.body.startswith("The RMM did not include an alert message.")
     assert len(bare.body) >= 10
     assert build_subject(make_alert(condition_name="  Disk \n full  ")) == "Disk full on ACME-FS01"
+
+
+def test_secrets_in_alert_text_never_reach_the_event_detail() -> None:
+    """A Datto alert with no type or category takes its condition from the message text."""
+    alert = parse_datto(
+        {
+            "alert_uid": "u1",
+            "device_uid": "abc-123",
+            "device_hostname": "SRV-FS01",
+            "alert_message": "Backup job failed: password=Sup3rS3cretPw! token ghp_abcdefghijklmnopqrstuvwxyz0123456789AB",
+        }
+    )
+    inbound = to_inbound(alert, client_hash=None)
+    detail = json.dumps(inbound.source_detail)
+    assert "Sup3rS3cretPw" not in detail and "ghp_abcdef" not in detail
+    assert "[REDACTED:password]" in inbound.source_detail["condition"]

@@ -30,7 +30,6 @@ SEVERITY_LABELS: Final[dict[str, str]] = {
 }
 VENDOR_LABELS: Final[dict[str, str]] = {"ninjaone": "NinjaOne", "datto": "Datto RMM"}
 
-DEDUPE_KEY_MAX_CHARS = 200
 
 
 @dataclass(frozen=True)
@@ -55,11 +54,13 @@ class RmmAlert:
 
     @property
     def dedupe_key(self) -> str:
-        """``vendor:device:condition`` in lower case with whitespace collapsed, hashed when long."""
+        """``vendor:sha256:<hash>`` of ``vendor:device:condition`` in lower case with whitespace collapsed.
+
+        Always hashed, because the condition can come from free alert text and the key is stored in
+        events that the dashboard shows. A hash keeps any secret in that text out of the audit trail.
+        """
         key = " ".join(f"{self.vendor}:{self.device_id}:{self.condition}".lower().split())
-        if len(key) > DEDUPE_KEY_MAX_CHARS:
-            return f"{self.vendor}:sha256:{hashlib.sha256(key.encode()).hexdigest()[:40]}"
-        return key
+        return f"{self.vendor}:sha256:{hashlib.sha256(key.encode()).hexdigest()[:40]}"
 
     @property
     def source_id(self) -> str | None:

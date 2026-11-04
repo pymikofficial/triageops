@@ -9,6 +9,7 @@ outside the ticket block.
 from datetime import UTC
 
 from ..schemas import InboundTicket
+from ..security import mask_text
 from .models import (
     SEVERITY_LABELS,
     VENDOR_LABELS,
@@ -81,8 +82,9 @@ def to_inbound(alert: RmmAlert, *, client_hash: str | None) -> InboundTicket:
         source_detail={
             "rmm_key": alert.dedupe_key,
             "vendor": alert.vendor,
-            "device": _device_label(alert),
-            "condition": alert.condition_name or alert.condition,
+            # Event detail is shown in the dashboard, so it is masked like the subject and body.
+            "device": mask_text(_device_label(alert)).text,
+            "condition": mask_text(alert.condition_name or alert.condition).text,
             "severity": alert.severity,
             "occurrences": 1,
         },

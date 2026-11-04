@@ -43,7 +43,7 @@ Other NinjaOne activities (acknowledged, disabled, non condition activities) are
 
 Errors are 401 for a bad signature, 400 for a body that is not valid JSON, 422 for a payload that is not a recognisable alert, 413 above 64 KB and 503 when the database is down.
 
-**De-duplication.** The key is vendor, device and condition. For NinjaOne that is `deviceId` and `sourceConfigUid` (falling back to `sourceName` or `subject`). For Datto it is the device UID and `alert_type` plus `alert_category` (falling back to the `alertContext` class or the message with digits removed). A new alert with the same key within `RMM_DEDUP_MINUTES` (default 30) of the last occurrence joins the open ticket and adds an `rmm_repeat` event with the occurrence count. The window rolls from the last occurrence, so a flapping alert stays on one ticket. Resolved and failed tickets are never reused. Repeats do not run triage again, do not create another PSA ticket and do not alert again.
+**De-duplication.** The key is vendor, device and condition. For NinjaOne that is `deviceId` and `sourceConfigUid` (falling back to `sourceName` or `subject`). For Datto it is the device UID and `alert_type` plus `alert_category` (falling back to the `alertContext` class or the message with digits removed). A new alert with the same key within `RMM_DEDUP_MINUTES` (default 30) of the last occurrence joins the open ticket and adds an `rmm_repeat` event with the occurrence count. The window rolls from the last occurrence, so a flapping alert stays on one ticket. Resolved and failed tickets are never reused. Repeats do not run triage again, do not create another PSA ticket and do not alert again. The stored key is a SHA-256 hash, and the device and condition labels in event detail are masked like the ticket, because the timeline is shown in the dashboard.
 
 Retried deliveries are matched on the vendor alert id. NinjaOne uses `id` plus `statusCode`, Datto uses the alert UID plus raised or resolved, because Datto sends the same UID for both.
 
@@ -59,7 +59,7 @@ Retried deliveries are matched on the vendor alert id. NinjaOne uses `id` plus `
 
 When NinjaOne `severity` is NONE or missing, its `priority` is used instead (HIGH P2, MEDIUM P3, LOW P4). The hint is a starting point only. Claude still judges impact from the facts, and the business rules still have the final word. If Claude is unavailable, the keyword fallback uses the hint when it is more urgent than its own answer and logs a `priority_hint_fallback` rule.
 
-**Datto RMM template.** Use this as the raised payload of a Global Webhook, with Content Type `text/plain` so the n8n relay receives the text even when a value breaks the JSON. For the resolved payload use the same body with `"event":"resolved"`.
+**Datto RMM template.** Use this as the raised payload of a Global Webhook, with Content Type `text/plain` so the n8n relay receives the text even when a value breaks the JSON. For the resolved payload use the same body with `"event":"resolved"`, or send resolved alerts to a separate URL ending in `&event=resolved`, which the relay applies over any event value in the body.
 
 ```json
 {"source":"datto_rmm","event":"triggered","alert_uid":"[alert_uid]","priority":"[alert_priority]","alert_type":"[alert_type]","alert_category":"[alert_category]","alert_message":"[alert_message]","device_uid":"[device_uid]","device_hostname":"[device_hostname]","site_uid":"[site_uid]","site_name":"[site_name]"}

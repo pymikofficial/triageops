@@ -42,6 +42,8 @@ from .security import (
 from .taxonomy import CHANNELS, PRIORITIES, STATUSES
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+# httpx logs every request URL at INFO. Slack, Discord and Teams webhook URLs are secrets, so keep them out.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("triageops")
 
 MAX_BODY_BYTES = 64 * 1024

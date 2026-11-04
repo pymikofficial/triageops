@@ -238,7 +238,19 @@ class HaloPsaAdapter:
         raise self._create_error(response, outcome.attempts)
 
     def _post(self, url: str, payload: list[dict[str, Any]], budget: RetryBudget) -> httpx.Response:
-        token = self.get_token(budget)
+        try:
+            token = self.get_token(budget)
+        except PsaError as exc:
+            if not exc.ambiguous:
+                raise
+            # A token request that timed out is not an ambiguous create. The ticket was never sent.
+            raise PsaError(
+                "HaloPSA did not answer the sign in request, so the ticket was not sent and it is safe to retry",
+                status_code=exc.status_code,
+                attempts=exc.attempts,
+                retryable=True,
+                ambiguous=False,
+            ) from exc
         response, _ = send_with_retry(
             self.client, "POST", url, idempotent=False, budget=budget, label=self.label,
             json=payload, headers={**self._headers(token), "Content-Type": "application/json"},

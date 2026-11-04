@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 from fakes_integrations import (
     IntegrationFakeStore,
+    hashed_key,
     install_integration_store,
     load_rmm_fixture,
 )
@@ -51,7 +52,7 @@ def test_a_new_alert_is_triaged_into_a_ticket(fake: IntegrationFakeStore) -> Non
     assert ticket["subject"] == "Disk Free Space < 10% on ACME-FS01"
     (received,) = fake.events_of(ticket["id"], "received")
     assert received["detail"] == {
-        "rmm_key": "ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614",
+        "rmm_key": hashed_key("ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614"),
         "vendor": "ninjaone",
         "device": "ACME-FS01",
         "condition": "Disk Free Space < 10%",
@@ -90,7 +91,7 @@ def test_repeats_within_the_window_collapse_and_count(fake: IntegrationFakeStore
     detail = repeats[0]["detail"]
     assert detail == {
         "description": "Repeat alert collapsed into this ticket, occurrence 2",
-        "rmm_key": "ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614",
+        "rmm_key": hashed_key("ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614"),
         "source_id": "rmm:ninjaone:2:TRIGGERED",
         "occurrences": 2,
         "severity": "critical",
@@ -206,7 +207,7 @@ def test_a_reset_is_recorded_on_the_open_ticket(fake: IntegrationFakeStore) -> N
     (event,) = fake.events_of(first.ticket["id"], "rmm_reset")
     assert event["detail"] == {
         "description": "The RMM reported that the alert condition has cleared",
-        "rmm_key": "ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614",
+        "rmm_key": hashed_key("ninjaone:1042:b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614"),
         "source_id": "rmm:ninjaone:48219902:RESET",
         "severity": "major",
     }

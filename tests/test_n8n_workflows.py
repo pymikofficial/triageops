@@ -386,15 +386,16 @@ def test_sign_node_splits_a_datto_alerts_list(tmp_path: Path) -> None:
 
 
 @needs_node
-def test_sign_node_merges_datto_query_parameters_only_when_missing(tmp_path: Path) -> None:
+def test_sign_node_merges_datto_query_parameters(tmp_path: Path) -> None:
     body = {key: value for key, value in DATTO_TEMPLATE.items() if key not in ("event", "priority")}
     body["Priority"] = "[alert_priority]"
     [out] = sign_items(tmp_path, {"body": body, "query": {"source": "datto", "event": "Resolved", "priority": "high"}})
     merged = json.loads(out["rawBody"])
     assert (merged["event"], merged["Priority"]) == ("resolved", "High")
     assert "priority" not in merged, "an unexpanded key is filled in place, not duplicated"
+    # A separate resolved URL wins over the event in a template body, a priority in the body wins over the URL.
     [kept] = sign_items(tmp_path, {"body": DATTO_TEMPLATE, "query": {"event": "resolved", "priority": "Low"}})
-    assert json.loads(kept["rawBody"]) == DATTO_TEMPLATE
+    assert json.loads(kept["rawBody"]) == {**DATTO_TEMPLATE, "event": "resolved"}
     [ignored] = sign_items(tmp_path, {"body": body, "query": {"source": "datto", "event": "bogus", "priority": "urgent"}})
     assert json.loads(ignored["rawBody"]) == body
     [ninja] = sign_items(tmp_path, {"body": NINJA_TRIGGERED, "query": {"event": "resolved"}})
