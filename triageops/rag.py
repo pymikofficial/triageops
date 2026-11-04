@@ -1,24 +1,35 @@
-"""Retrieval over the knowledge base: embeddings from a Supabase Edge Function, search in pgvector.
+"""Retrieval over the knowledge base: embeddings from a Supabase Edge Function, search in Postgres.
 
 The Edge Function runs gte-small and returns normalised 384 dimension vectors,
-so cosine similarity in ``match_kb`` is a direct relevance score.
+so cosine similarity in ``match_kb`` is a direct relevance score. When migration
+004 is applied, ``match_kb_hybrid`` also runs full text search and fuses both
+rankings with reciprocal rank fusion. Until then search falls back to vector only.
 """
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
 import httpx
+import psycopg
+from psycopg import errors
 
-from . import store
+from . import hybrid, store
 from .config import settings
 from .db import Connection
+
+logger = logging.getLogger(__name__)
 
 EMBED_TIMEOUT_SECONDS = 8.0
 EMBEDDING_DIMENSIONS = 384
 DEFAULT_MATCH_COUNT = 3
 # gte-small reads at most 512 tokens, so longer text adds cost without signal.
 QUERY_CHAR_LIMIT = 2000
+
+
+# Errors that mean migration 004 is missing or not granted, rather than a passing fault.
+_HYBRID_MISSING = (errors.UndefinedFunction, errors.UndefinedColumn, errors.InsufficientPrivilege)
 
 
 class EmbeddingError(RuntimeError):
@@ -32,6 +43,7 @@ class KbMatch:
     category: str
     content: str
     similarity: float
+    retrieval: str = "vector"
 
     def ref(self) -> dict[str, Any]:
         """The compact form stored in ``tickets.kb_refs``."""
@@ -71,17 +83,32 @@ def vector_literal(vector: Sequence[float]) -> str:
     return "[" + ",".join(f"{float(value):.7g}" for value in vector) + "]"
 
 
+def _match(row: dict[str, Any], retrieval: str) -> KbMatch:
+    return KbMatch(
+        slug=row["slug"],
+        title=row["title"],
+        category=row["category"],
+        content=row["content"],
+        similarity=float(row["similarity"] or 0.0),
+        retrieval=retrieval,
+    )
+
+
 def search(conn: Connection, text: str, count: int = DEFAULT_MATCH_COUNT) -> list[KbMatch]:
-    """Top ``count`` articles by cosine similarity. Raises ``EmbeddingError``."""
-    (vector,) = embed([text[:QUERY_CHAR_LIMIT]])
-    rows = store.match_kb(conn, vector_literal(vector), count)
-    return [
-        KbMatch(
-            slug=row["slug"],
-            title=row["title"],
-            category=row["category"],
-            content=row["content"],
-            similarity=float(row["similarity"]),
-        )
-        for row in rows
-    ]
+    """Top ``count`` articles, hybrid when available and vector only otherwise.
+
+    Raises ``EmbeddingError`` when the query cannot be embedded.
+    """
+    query = text[:QUERY_CHAR_LIMIT]
+    (vector,) = embed([query])
+    literal = vector_literal(vector)
+    if hybrid.switch.enabled():
+        try:
+            rows = store.match_kb_hybrid(conn, literal, query, count)
+        except _HYBRID_MISSING as exc:
+            hybrid.switch.disable(type(exc).__name__)
+        except psycopg.Error as exc:
+            logger.warning("hybrid knowledge base search failed, using vector only error=%s", type(exc).__name__)
+        else:
+            return [_match(row, "hybrid") for row in rows]
+    return [_match(row, "vector") for row in store.match_kb(conn, literal, count)]
