@@ -22,9 +22,9 @@ def copy_problems(text: str) -> list[str]:
     return problems
 
 
-def test_knowledge_base_has_twelve_unique_articles() -> None:
-    assert len(KB_ARTICLES) == 12
-    assert len({article.slug for article in KB_ARTICLES}) == 12
+def test_knowledge_base_has_thirty_unique_articles() -> None:
+    assert len(KB_ARTICLES) == 30
+    assert len({article.slug for article in KB_ARTICLES}) == 30
 
 
 @pytest.mark.parametrize("article", KB_ARTICLES, ids=lambda article: article.slug)

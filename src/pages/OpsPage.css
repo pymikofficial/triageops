@@ -1,0 +1,336 @@
+/* Operations page. Loaded with its lazy chunk, so the dashboard bundle stays the same size. */
+
+.ops-page {
+  padding-bottom: 32px;
+}
+
+.ops-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.ops-range {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.ops-range-button {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.ops-range-button:hover {
+  background: var(--surface-3);
+}
+
+.ops-range-button.is-active {
+  background: var(--accent-weak);
+  color: var(--accent-ink);
+}
+
+.ops-range-button:focus-visible,
+.cost-slot:focus-visible,
+.ops-table-details summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.ops-window {
+  font-size: 13px;
+}
+
+.ops-kpis {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.ops-kpis .kpi-value {
+  font-size: 26px;
+}
+
+.ops-error {
+  padding: 20px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.ops-warning {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--p2-line);
+  border-radius: var(--radius-sm);
+  background: var(--warn-weak);
+  color: var(--warn-ink);
+}
+
+.ops-panel {
+  margin-bottom: 24px;
+}
+
+.ops-panel-body {
+  padding: 18px 20px 20px;
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.ops-grid .ops-panel {
+  margin-bottom: 0;
+}
+
+/* Cost per day: one series, so no legend. Columns sit on the baseline with rounded tops. */
+
+.cost-chart {
+  --plot-height: 200px;
+  padding-left: 64px;
+}
+
+.cost-plot {
+  position: relative;
+  height: var(--plot-height);
+}
+
+.cost-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cost-gridline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--border);
+}
+
+.cost-gridline:last-child {
+  border-top-color: var(--border-strong);
+}
+
+.cost-gridlabel {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: -8px;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cost-columns {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.cost-slot {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: default;
+}
+
+.cost-slot.is-active {
+  background: rgba(47, 91, 234, 0.06);
+}
+
+.cost-column {
+  display: block;
+  width: min(100%, 28px);
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+  transition: height 300ms ease;
+}
+
+.cost-slot.is-active .cost-column {
+  background: var(--accent-hover);
+}
+
+.cost-tooltip {
+  position: absolute;
+  top: 6px;
+  transform: translateX(10px);
+  display: grid;
+  gap: 1px;
+  min-width: 170px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgba(26, 29, 33, 0.1);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cost-tooltip.is-left {
+  transform: translateX(calc(-100% - 10px));
+}
+
+.cost-tooltip strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.cost-axis {
+  display: flex;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.cost-axis span {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: visible;
+}
+
+/* Today is always labelled. Right align it so it never runs past the plot. */
+.cost-axis span:last-child {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ops-table-details {
+  margin-top: 18px;
+}
+
+.ops-table-details summary {
+  cursor: pointer;
+  width: fit-content;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--accent-ink);
+  border-radius: 4px;
+}
+
+.ops-table {
+  margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ops-table th[scope='row'] {
+  font-weight: 550;
+  color: var(--ink);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ops-table td {
+  white-space: nowrap;
+}
+
+.ops-table tbody tr:last-child th,
+.ops-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Model mix: the model name is the identity, so every bar shares one hue. */
+
+.ops-bar-list {
+  gap: 14px;
+}
+
+.ops-bar-row {
+  grid-template-columns: minmax(120px, 40%) minmax(0, 1fr) 40px;
+  row-gap: 3px;
+}
+
+.ops-bar-note {
+  grid-column: 1 / -1;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.bar-model {
+  background: var(--accent);
+}
+
+.bar-fallback {
+  background: #8a929c;
+}
+
+.ops-footnote {
+  margin-top: 20px;
+  font-size: 12.5px;
+  max-width: 110ch;
+}
+
+@media (max-width: 1100px) {
+  .ops-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ops-kpis .kpi:nth-child(4) {
+    border-left: 0;
+  }
+
+  .ops-kpis .kpi:nth-child(n + 4) {
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 860px) {
+  .ops-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .ops-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The dashboard strip has five tiles and stretches the last one. Six tiles pair up evenly. */
+  .ops-kpis .kpi:last-child {
+    grid-column: auto;
+    border-left: 1px solid var(--border);
+  }
+
+  .ops-kpis .kpi:nth-child(4) {
+    border-left: 1px solid var(--border);
+  }
+
+  .cost-chart {
+    --plot-height: 160px;
+    padding-left: 56px;
+  }
+
+  .cost-axis .is-minor {
+    visibility: hidden;
+  }
+
+  /* Too narrow to sit beside the column, so the tooltip is centred over the plot. */
+  .cost-tooltip,
+  .cost-tooltip.is-left {
+    left: 50% !important;
+    transform: translateX(-50%);
+  }
+}

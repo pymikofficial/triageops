@@ -236,6 +236,16 @@ def queue_stats(conn: Connection) -> dict[str, Any]:
     }
 
 
+def ops_ticket_rows(conn: Connection, since: datetime, limit: int) -> list[dict[str, Any]]:
+    """One narrow row per ticket created since ``since``, for the operations metrics."""
+    return conn.execute(
+        "select created_at, ai_model, ai_latency_ms, input_tokens, output_tokens, "
+        "priority, sla_due_at, sla_breached from tickets "
+        "where created_at >= %s order by created_at limit %s",
+        (since, limit),
+    ).fetchall()
+
+
 def count_recent_tickets_from(conn: Connection, client_hash: str) -> int:
     row = conn.execute(
         "select count(*) as n from tickets where client_hash = %s and created_at > now() - interval '1 hour'",
@@ -322,6 +332,20 @@ def match_kb(conn: Connection, vector_literal: str, count: int) -> list[dict[str
         "select slug, title, category, content, similarity from match_kb(%s::extensions.vector, %s::int)",
         (vector_literal, count),
     ).fetchall()
+
+
+def match_kb_hybrid(conn: Connection, vector_literal: str, query_text: str, count: int) -> list[dict[str, Any]]:
+    """Full text plus vector search fused with RRF (migration 004).
+
+    Runs inside its own transaction block, a savepoint when nested, so a missing
+    function before the migration is applied leaves the connection usable.
+    """
+    with conn.transaction():
+        return conn.execute(
+            "select slug, title, category, content, similarity, text_rank, rrf_score "
+            "from match_kb_hybrid(%s::extensions.vector, %s::text, %s::int)",
+            (vector_literal, query_text, count),
+        ).fetchall()
 
 
 def search_kb_text(conn: Connection, query: str, limit: int) -> list[dict[str, Any]]:

@@ -315,7 +315,8 @@ def _retrieve(conn: Connection, ticket: dict[str, Any], events: list[Event]) -> 
             ("error", {"stage": "kb_retrieval", "reason": "Knowledge base search failed, triage continued without it"})
         )
         return []
-    events.append(("kb_matched", {"matches": [article.ref() for article in articles]}))
+    method = articles[0].retrieval if articles else "none"
+    events.append(("kb_matched", {"matches": [article.ref() for article in articles], "method": method}))
     return articles
 
 
