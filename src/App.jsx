@@ -7,6 +7,7 @@ import TicketDrawer from './components/TicketDrawer.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 const BuildPage = lazy(() => import('./pages/BuildPage.jsx'));
+const EvalsPage = lazy(() => import('./pages/EvalsPage.jsx'));
 const AnalystPage = lazy(() => import('./pages/AnalystPage.jsx'));
 
 function ScrollManager() {
@@ -37,6 +38,14 @@ export default function App() {
           element={
             <Suspense fallback={<main id="main" className="container page-loading" aria-busy="true">Loading the build document</main>}>
               <BuildPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/evals"
+          element={
+            <Suspense fallback={<main id="main" className="container page-loading" aria-busy="true">Loading the evaluation results</main>}>
+              <EvalsPage />
             </Suspense>
           }
         />

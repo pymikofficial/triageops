@@ -25,6 +25,9 @@ export default function Header() {
           <NavLink to="/build" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
             How it was built
           </NavLink>
+          <NavLink to="/evals" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
+            Evaluation
+          </NavLink>
           <NavLink to="/analyst" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
             {signedIn ? 'Analyst console' : 'Analyst sign in'}
           </NavLink>
