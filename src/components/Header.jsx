@@ -23,6 +23,9 @@ export default function Header() {
           <NavLink to="/build" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
             How it was built
           </NavLink>
+          <NavLink to="/evals" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
+            Evaluation
+          </NavLink>
           <a className="nav-link" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
             GitHub
             <ExternalIcon size={13} className="nav-external" />

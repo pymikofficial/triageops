@@ -1,0 +1,360 @@
+/* The /evals page. Kept out of styles.css and built on its tokens. */
+
+.eval-page {
+  padding-top: 24px;
+  padding-bottom: 32px;
+}
+
+.eval-notice {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--p2-line);
+  border-radius: var(--radius);
+  background: var(--warn-weak);
+  color: var(--ink-2);
+  font-size: 14px;
+  max-width: 90ch;
+}
+
+.eval-gate {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.eval-gate.is-pass {
+  border-color: #b9dbbb;
+  background: var(--ok-weak);
+}
+
+.eval-gate.is-fail {
+  border-color: var(--p1-line);
+  background: var(--p1-weak);
+}
+
+.eval-gate-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.is-pass .eval-gate-icon {
+  background: var(--ok);
+}
+
+.is-fail .eval-gate-icon {
+  background: var(--p1);
+}
+
+.eval-gate-title {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.eval-gate-text {
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.eval-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.eval-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.eval-tile-label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.eval-tile-value {
+  margin-top: 6px;
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-tile-critical .eval-tile-value {
+  color: var(--p1-ink);
+}
+
+.eval-tile-note {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.eval-section {
+  margin-bottom: 32px;
+}
+
+.eval-section-title {
+  font-size: 17px;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+
+/* Confusion matrix: one hue, light to dark, with the diagonal outlined. */
+
+.eval-matrix-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+
+.eval-matrix {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-matrix-caption {
+  caption-side: top;
+  text-align: left;
+  padding-bottom: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 70ch;
+}
+
+.eval-matrix th {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding: 4px 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.eval-matrix th[scope='row'] {
+  text-align: left;
+  padding-left: 0;
+}
+
+.eval-matrix-corner {
+  text-align: left !important;
+  padding-left: 0 !important;
+  color: var(--muted) !important;
+}
+
+.eval-cell {
+  width: 64px;
+  height: 44px;
+  text-align: center;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.eval-cell.has-value {
+  color: var(--ink);
+  background: rgba(47, 91, 234, var(--cell-alpha, 0.1));
+}
+
+.eval-cell.is-strong {
+  color: #fff;
+}
+
+.eval-cell.is-diagonal {
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+
+.eval-cell:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.eval-recall {
+  padding: 0 10px;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.eval-matrix-note {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Failures */
+
+.eval-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.eval-filter {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.eval-filter:hover {
+  border-color: var(--border-strong);
+}
+
+.eval-filter.is-active {
+  background: var(--accent-weak);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.eval-filter-count {
+  margin-left: 4px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-failures {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.eval-failure {
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.eval-failure-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.eval-failure-head .inline-flag {
+  margin-left: 0;
+}
+
+.eval-failure-subject {
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.eval-mismatches {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.eval-mismatch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.eval-mismatch-field {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.eval-mismatch-label {
+  color: var(--muted);
+}
+
+.eval-failure-meta {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.eval-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 8px;
+  vertical-align: 1px;
+}
+
+.eval-tag {
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--surface-3);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* Run details */
+
+.eval-run {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px 24px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13.5px;
+}
+
+.eval-run dt {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.eval-run dd {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .eval-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .eval-tile-value {
+    font-size: 22px;
+  }
+
+  .eval-cell {
+    width: 44px;
+    height: 38px;
+  }
+}
