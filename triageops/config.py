@@ -8,7 +8,7 @@ Tests override individual attributes on ``settings`` with monkeypatch.
 import os
 from dataclasses import dataclass
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 DEFAULT_EMBED_URL = "https://sdrwlskpdnhjmynxgrnb.supabase.co/functions/v1/embed"
 

@@ -46,7 +46,7 @@ def test_initialize_negotiates_the_protocol_version(client: TestClient, requeste
     result = body["result"]
     assert result["protocolVersion"] == agreed
     assert result["capabilities"] == {"tools": {}}
-    assert result["serverInfo"] == {"name": "triageops", "version": "1.0.0"}
+    assert result["serverInfo"] == {"name": "triageops", "version": "1.1.0"}
 
 
 def test_notifications_get_202_with_no_body(client: TestClient) -> None:
