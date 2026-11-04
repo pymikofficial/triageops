@@ -2,10 +2,8 @@
 
 An AI service desk for an IT managed service provider. Tickets arrive by email, WhatsApp, a web portal and signed webhooks, Claude triages each one against the MSP knowledge base, and the team works the queue from a live dashboard.
 
-**Live demo** {{LIVE_URL}}  
-**How it was built** {{LIVE_URL}}/build (the ten stage build document, also in [docs/BUILD.md](docs/BUILD.md))
-
-> Screenshot placeholder. Add `docs/screenshot.png` of the dashboard with a P1 ticket open.
+**Live demo** https://triageops.vercel.app  
+**How it was built** https://triageops.vercel.app/build (the ten stage build document, also in [docs/BUILD.md](docs/BUILD.md))
 
 ```text
 Requirement → Architecture → AI → API Integration → Backend → Database → Frontend → Automation → Deployment → Security

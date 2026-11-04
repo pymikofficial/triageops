@@ -370,7 +370,10 @@ $$;
 ## Build log
 
 - Started: 13:01 IST, 4 Nov 2026
-- Live: {{LIVE_TIME}}
+- Live: 13:57 IST, 4 Nov 2026 (about 56 minutes from start to the first live deploy)
+- 14:05 IST, live fix. The Supabase edge runtime caps CPU time per request, so a 12 article embedding batch failed with WORKER_RESOURCE_LIMIT. Seeding now sends 2 articles per call.
+- 14:15 IST, live fix. Requesters sent as "Name <email>" were masked badly. The parser now splits the name from the address, with a new test.
+- 14:20 IST, live checks passed. A forged signature, a replayed request, a missing cron token and a wrong MCP token all got 401. The WhatsApp handshake, MCP tools and the copilot answered correctly.
 
 Parallel Claude Code agents built the backend, the frontend and the documentation and DevOps kit against one written contract for endpoints, schema, taxonomy and copy rules.
 

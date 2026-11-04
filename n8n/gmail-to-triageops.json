@@ -63,7 +63,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://<host>/api/webhooks/inbound",
+        "url": "https://triageops.vercel.app/api/webhooks/inbound",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
