@@ -25,6 +25,7 @@ from . import agent, channels, db, kb_seed, mcp, rag, store, triage
 from .config import VERSION, settings
 from .db import Connection, DatabaseUnavailable
 from .rag import EmbeddingError
+from .rmm import routes as rmm_routes
 from .schemas import ChatIn, DemoTicketIn, InboundTicketIn, PostmarkInboundIn
 from .security import (
     MCP_CORS_HEADERS,
@@ -56,6 +57,8 @@ app = FastAPI(
     redoc_url=None,
     openapi_url="/api/openapi.json",
 )
+# RMM alert intake lives in its own module, see triageops/rmm/routes.py.
+app.include_router(rmm_routes.router)
 chat_limiter = SlidingWindowLimiter(limit=settings.chat_hourly_limit, window_seconds=3600)
 
 Model = TypeVar("Model", bound=BaseModel)

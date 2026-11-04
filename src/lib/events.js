@@ -14,6 +14,11 @@ export const EVENT_LABEL = {
   sla_breached: 'SLA breached',
   error: 'Error',
   human_review: 'Human review requested',
+  rmm_repeat: 'Repeat RMM alert',
+  rmm_reset: 'RMM alert cleared',
+  psa_synced: 'Created in PSA',
+  psa_skipped: 'PSA sync skipped',
+  psa_failed: 'PSA sync failed',
 };
 
 export const EVENT_TONE = {
@@ -28,6 +33,11 @@ export const EVENT_TONE = {
   sla_breached: 'danger',
   error: 'danger',
   human_review: 'warn',
+  rmm_repeat: 'warn',
+  rmm_reset: 'neutral',
+  psa_synced: 'accent',
+  psa_skipped: 'muted',
+  psa_failed: 'danger',
 };
 
 const TEXT_KEYS = ['text', 'message', 'detail', 'description', 'rule', 'reason', 'summary', 'note'];

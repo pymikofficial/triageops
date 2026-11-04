@@ -4,8 +4,9 @@
 and the triage pipeline consumes.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -27,6 +28,12 @@ class InboundTicket:
     is_demo: bool = False
     # Provider message id, so a retried delivery returns the original ticket.
     source_id: str | None = None
+    # Extra keys for the "received" event, such as the RMM de-duplication key.
+    source_detail: Mapping[str, Any] | None = None
+    # A priority suggested by a verified integration (an RMM severity), shown to Claude as a hint.
+    priority_hint: str | None = None
+    # Why the hint was given, built from our own vocabulary, never from raw payload text.
+    priority_hint_reason: str | None = None
 
 
 class _Request(BaseModel):
