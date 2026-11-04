@@ -5,8 +5,9 @@
 // so the secret itself never lives in code or in this repository.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const MAX_INPUTS = 32;
-const MAX_CHARS = 8000;
+// The edge runtime caps CPU time per request, so callers send a few short texts at a time.
+const MAX_INPUTS = 4;
+const MAX_CHARS = 2000;
 const SECRET_SHA256 =
   Deno.env.get("EMBED_SECRET_SHA256") ??
   "32900d8e2325912aba69488c0fe0e353e3e311444b5d77be56e192940fbe3d22";

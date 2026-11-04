@@ -11,7 +11,8 @@ from .db import Connection
 
 # Any constant works. It only has to be the same for every instance.
 KB_SEED_LOCK_KEY = 7_401_000_012
-SEED_EMBED_TIMEOUT_SECONDS = 25.0
+SEED_EMBED_TIMEOUT_SECONDS = 15.0
+SEED_BATCH_SIZE = 2
 
 
 @dataclass(frozen=True)
@@ -234,7 +235,11 @@ def seed_kb(conn: Connection) -> int:
         missing = [article for article in KB_ARTICLES if article.slug not in existing]
         if not missing:
             return 0
-        vectors = rag.embed([article.embedding_text() for article in missing], timeout=SEED_EMBED_TIMEOUT_SECONDS)
+        # Small batches: the edge runtime caps CPU time per request, so 12 articles in one call fails.
+        texts = [article.embedding_text() for article in missing]
+        vectors = []
+        for start in range(0, len(texts), SEED_BATCH_SIZE):
+            vectors.extend(rag.embed(texts[start:start + SEED_BATCH_SIZE], timeout=SEED_EMBED_TIMEOUT_SECONDS))
         rows = [
             (article.slug, article.title, article.category, article.content, rag.vector_literal(vector))
             for article, vector in zip(missing, vectors, strict=True)
