@@ -20,7 +20,7 @@ evals/dataset.jsonl ─► harness.run_cases ─► triage.process_ticket (uncha
 | Committed results | `evals/results/latest.json`, `evals/results/latest.md` |
 | Manual GitHub Actions run | `.github/workflows/evals.yml` |
 | Results page with nav link | `src/pages/EvalsPage.jsx`, `src/pages/EvalsPage.css`, route `/evals` |
-| Tests | `tests/test_evals.py` (34 tests, no network) |
+| Tests | `tests/test_evals.py` (35 tests, no network) |
 
 No schema change was needed, so there is no new migration.
 
