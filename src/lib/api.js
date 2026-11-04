@@ -20,7 +20,7 @@ function messageFrom(data, status) {
   return `The service returned status ${status}`;
 }
 
-export async function apiFetch(path, { method = 'GET', body, timeout = 20000, signal } = {}) {
+export async function apiFetch(path, { method = 'GET', body, timeout = 20000, signal, headers: extraHeaders } = {}) {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -34,7 +34,7 @@ export async function apiFetch(path, { method = 'GET', body, timeout = 20000, si
   }
 
   try {
-    const headers = { Accept: 'application/json' };
+    const headers = { Accept: 'application/json', ...extraHeaders };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const res = await fetch(path, {
       method,

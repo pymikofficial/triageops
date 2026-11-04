@@ -159,7 +159,7 @@ export default function Dashboard() {
           </aside>
         </div>
       </div>
-      <Outlet />
+      <Outlet context={{ refresh: load }} />
     </main>
   );
 }

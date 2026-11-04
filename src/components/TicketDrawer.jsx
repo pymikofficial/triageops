@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
+import { useAnalystSession } from '../lib/admin.js';
 import { describeEvent, eventLabel, EVENT_TONE } from '../lib/events.js';
 import { formatAbsolute, formatAgo, formatClock, formatInteger, formatOffset, formatPercent, formatSeconds, slaState, toDate, toFraction } from '../lib/format.js';
 import { useDocumentTitle, useNow, usePolling } from '../lib/hooks.js';
 import { PRIORITY_META } from '../lib/taxonomy.js';
 import { ChannelTag, PriorityBadge, SentimentText, StatusBadge } from './Badges.jsx';
+import AnalystActions from './AnalystActions.jsx';
 import CopyButton from './CopyButton.jsx';
 import { AlertIcon, CloseIcon, EyeIcon, ShieldIcon } from './Icons.jsx';
 
@@ -137,7 +139,7 @@ function Timeline({ events, ticket }) {
         const info = describeEvent(event);
         const at = toDate(event.created_at)?.getTime() || start;
         return (
-          <li key={event.id ?? i} className={`timeline-item tone-${EVENT_TONE[event.type] || 'neutral'}`}>
+          <li key={event.id ?? i} className={`timeline-item tone-${EVENT_TONE[event.type] || 'neutral'}${event.pending ? ' is-pending' : ''}`}>
             <span className="timeline-node" aria-hidden="true" />
             <div className="timeline-main">
               <div className="timeline-row">
@@ -223,6 +225,15 @@ export default function TicketDrawer() {
   const [state, setState] = useState({ phase: 'loading', data: null, error: null, status: 0 });
   const panelRef = useRef(null);
   const returnFocus = useRef(null);
+  const { signedIn } = useAnalystSession();
+  const outlet = useOutletContext();
+  const refreshQueue = outlet && outlet.refresh;
+  const [sessionEnded, setSessionEnded] = useState(false);
+  // Analyst actions update the drawer at once. A poll that started before an action finished is ignored.
+  const dataRef = useRef(null);
+  dataRef.current = state.data;
+  const actionSeq = useRef(0);
+  const actionPending = useRef(false);
 
   useDocumentTitle(`${ref} | TriageOps`);
 
@@ -233,8 +244,10 @@ export default function TicketDrawer() {
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setState((s) => ({ ...s, phase: s.data && s.data.ticket && s.data.ticket.ref === ref ? 'ready' : 'loading', error: null }));
+      const seq = actionSeq.current;
       try {
         const data = await api.ticket(ref);
+        if (actionPending.current || seq !== actionSeq.current) return;
         setState({ phase: 'ready', data, error: null, status: 200 });
       } catch (err) {
         if (silent) return;
@@ -247,6 +260,29 @@ export default function TicketDrawer() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const runAction = useCallback(
+    async (optimistic, request) => {
+      const previous = dataRef.current;
+      actionSeq.current += 1;
+      actionPending.current = true;
+      setSessionEnded(false);
+      setState((s) => ({ ...s, data: optimistic(previous) }));
+      try {
+        const data = await request();
+        setState({ phase: 'ready', data, error: null, status: 200 });
+        if (refreshQueue) refreshQueue();
+      } catch (err) {
+        setState((s) => ({ ...s, data: previous }));
+        if (err.status === 401) setSessionEnded(true);
+        throw err;
+      } finally {
+        actionSeq.current += 1;
+        actionPending.current = false;
+      }
+    },
+    [refreshQueue],
+  );
   usePolling(() => load(true), 15000, state.phase === 'ready');
 
   // Focus management: remember what had focus, move focus into the dialog, restore on close.
@@ -323,6 +359,15 @@ export default function TicketDrawer() {
         <section className="drawer-section" aria-label="Flags">
           <Flags ticket={ticket} events={events} />
         </section>
+
+        {signedIn ? <AnalystActions key={ticket.ref} ticket={ticket} events={events} onAction={runAction} /> : null}
+        {!signedIn && sessionEnded ? (
+          <div className="drawer-section">
+            <p className="analyst-session-note" role="alert">
+              Your analyst session has ended and the change was undone. <Link to="/analyst">Sign in again</Link> to continue.
+            </p>
+          </div>
+        ) : null}
 
         <section className="drawer-section" aria-labelledby="d-triage">
           <h3 className="section-title" id="d-triage">
