@@ -7,7 +7,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "excludeFiles": "{node_modules/**,src/**,dist/**,public/**,deploy/**,docs/**,tests/**,n8n/**,supabase/**,.github/**}"
+      "excludeFiles": "{node_modules/**,src/**,dist/**,public/**,deploy/**,docs/**,tests/**,evals/**,n8n/**,supabase/**,.github/**}"
     }
   },
   "rewrites": [

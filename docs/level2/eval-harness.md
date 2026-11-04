@@ -45,7 +45,7 @@ Labels follow the system prompt's priority matrix and team routing, and tests ch
 
 1. **Database.** `EvalStore` replaces the `store` functions in memory behind a lock, so four tickets can run at once.
 2. **Retrieval.** `LexicalRetriever` ranks the twelve seeded runbooks by TF-IDF cosine similarity in place of gte-small embeddings in Supabase. Claude still sees three relevant articles, but retrieval quality differs from production, so the eval measures classification, not retrieval.
-3. **Alerts.** `ALERT_WEBHOOK_URL` is cleared for the run.
+3. **Alerts and PSA sync.** `ALERT_WEBHOOK_URL` is cleared and `PSA_PROVIDER` is treated as unset for the run, so nothing leaves the machine apart from the Claude call.
 
 Every stand-in is restored afterwards, and a test fails if the embeddings client is called.
 

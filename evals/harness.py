@@ -5,9 +5,10 @@ call, output repair, the business rules and the SLA. Three things are swapped
 for local stand-ins, so the only network call is the one to Claude.
 
 1. ``triageops.store`` writes go to ``EvalStore``, a thread safe in-memory store.
-2. ``rag.search`` uses ``LexicalRetriever`` over the twelve seeded runbooks, in
-   place of gte-small embeddings in Supabase.
-3. ``ALERT_WEBHOOK_URL`` is cleared, so no alert leaves the machine.
+2. ``rag.search`` uses ``LexicalRetriever`` over the seeded runbooks, in place
+   of gte-small embeddings in Supabase.
+3. ``ALERT_WEBHOOK_URL`` is cleared and PSA sync is switched off for the run, so
+   no alert leaves the machine and no PSA ticket is created.
 """
 
 import hashlib
@@ -29,6 +30,7 @@ from typing import Any
 from triageops import rag, store, triage
 from triageops.config import settings
 from triageops.kb_seed import KB_ARTICLES
+from triageops.psa.config import psa_settings
 from triageops.rag import KbMatch
 from triageops.schemas import InboundTicket
 from triageops.store import TICKET_COLUMNS
@@ -228,11 +230,14 @@ def offline_pipeline(eval_store: EvalStore, retriever: LexicalRetriever, *, mode
     saved_store = {name: getattr(store, name) for name in _STORE_FUNCTIONS}
     saved_search = rag.search
     saved_settings = (settings.alert_webhook_url, settings.triage_model)
+    saved_psa_provider = psa_settings.provider
     try:
         for name in _STORE_FUNCTIONS:
             setattr(store, name, getattr(eval_store, name))
         rag.search = retriever.search
         settings.alert_webhook_url = ""
+        # An eval run with a production environment loaded must never create PSA tickets.
+        psa_settings.provider = ""
         if model:
             settings.triage_model = model
         yield
@@ -241,6 +246,7 @@ def offline_pipeline(eval_store: EvalStore, retriever: LexicalRetriever, *, mode
             setattr(store, name, function)
         rag.search = saved_search
         settings.alert_webhook_url, settings.triage_model = saved_settings
+        psa_settings.provider = saved_psa_provider
 
 
 def _final(ticket: dict[str, Any]) -> dict[str, Any]:

@@ -12,6 +12,8 @@ from fakes import VALID_TRIAGE, tool_response
 from evals import harness, report, run_eval, scoring
 from triageops import rag, store, triage
 from triageops.config import settings
+from triageops.psa import sync as psa_sync
+from triageops.psa.config import psa_settings
 from triageops.rules import find_critical_security_trigger
 from triageops.schemas import TicketIn
 from triageops.taxonomy import CATEGORIES, CHANNELS, PRIORITIES, TEAMS
@@ -323,6 +325,18 @@ def test_offline_pipeline_restores_everything() -> None:
         assert store.insert_ticket is not before[0] and rag.search is not before[1]
     assert (store.insert_ticket, rag.search, settings.triage_model) == before
     assert settings.alert_webhook_url == "https://hooks.example.com/alert"
+
+
+def test_offline_pipeline_never_creates_psa_tickets(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A run with a production environment loaded must not send the dataset to the PSA."""
+    monkeypatch.setattr(psa_settings, "provider", "halopsa")
+    calls: list[str] = []
+    monkeypatch.setattr(psa_sync.factory, "get_adapter", lambda *a, **k: calls.append("adapter") or None)
+    with harness.offline_pipeline(harness.EvalStore(), harness.LexicalRetriever()):
+        assert psa_settings.provider == ""
+        assert psa_sync.sync_after_triage(object(), {"ref": "TKT-1104-0001"}) is None
+    assert psa_settings.provider == "halopsa"
+    assert calls == []
 
 
 class OracleAnthropic:
