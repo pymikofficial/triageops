@@ -21,7 +21,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel, ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import agent, channels, db, kb_seed, mcp, rag, store, triage
+from . import admin, agent, channels, db, kb_seed, mcp, rag, store, triage
 from .config import VERSION, settings
 from .db import Connection, DatabaseUnavailable
 from .rag import EmbeddingError
@@ -401,3 +401,7 @@ def mcp_get() -> JSONResponse:
 @app.options(MCP_PATH)
 def mcp_preflight() -> Response:
     return Response(status_code=204)
+
+
+# Analyst console, every route behind the ADMIN_TOKEN bearer token (triageops/admin.py).
+app.include_router(admin.router)

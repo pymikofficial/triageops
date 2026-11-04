@@ -1,6 +1,6 @@
 // Turns ticket_events rows into readable timeline entries. The detail column is free
 // form JSON, so this reads the common keys first and falls back to a key and value list.
-import { formatPercent, formatSeconds, humanise } from './format.js';
+import { formatAbsolute, formatPercent, formatSeconds, humanise, toDate } from './format.js';
 
 export const EVENT_LABEL = {
   received: 'Received',
@@ -14,6 +14,10 @@ export const EVENT_LABEL = {
   sla_breached: 'SLA breached',
   error: 'Error',
   human_review: 'Human review requested',
+  human_override: 'Analyst override',
+  reply_approved: 'Reply approved by an analyst',
+  resolved: 'Resolved by an analyst',
+  reopened: 'Reopened by an analyst',
 };
 
 export const EVENT_TONE = {
@@ -28,14 +32,26 @@ export const EVENT_TONE = {
   sla_breached: 'danger',
   error: 'danger',
   human_review: 'warn',
+  human_override: 'warn',
+  reply_approved: 'accent',
+  resolved: 'ok',
+  reopened: 'warn',
 };
+
+// Fact labels that humanise would get wrong.
+const FACT_LABEL = { sla: 'SLA', sla_due_at: 'SLA due', by: 'By' };
+
+function factLabel(key) {
+  return FACT_LABEL[key] || humanise(key);
+}
 
 const TEXT_KEYS = ['text', 'message', 'detail', 'description', 'rule', 'reason', 'summary', 'note'];
 
 function asText(value) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'number') return String(value);
   if (Array.isArray(value)) {
     const parts = value.map((v) => (typeof v === 'object' && v ? v.title || v.slug || v.name || null : asText(v))).filter(Boolean);
     return parts.length ? parts.join(', ') : null;
@@ -46,6 +62,7 @@ function asText(value) {
 function formatValue(key, value) {
   if (/latency|_ms$/.test(key) && Number.isFinite(Number(value))) return formatSeconds(value);
   if (/similarity|confidence/.test(key) && Number.isFinite(Number(value))) return formatPercent(value);
+  if (/_at$/.test(key) && typeof value === 'string' && toDate(value)) return formatAbsolute(value);
   return asText(value);
 }
 
@@ -69,7 +86,7 @@ export function describeEvent(event) {
   }
 
   if (detail.from !== undefined && detail.to !== undefined) {
-    out.facts.push(['Change', `${asText(detail.from)} to ${asText(detail.to)}`]);
+    out.facts.push(['Change', `${asText(detail.from) ?? 'Not set'} to ${asText(detail.to) ?? 'Not set'}`]);
     used.add('from');
     used.add('to');
   }
@@ -89,12 +106,12 @@ export function describeEvent(event) {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       Object.entries(value).forEach(([k2, v2]) => {
         const text = formatValue(k2, v2);
-        if (text !== null) out.facts.push([humanise(k2), text]);
+        if (text !== null) out.facts.push([factLabel(k2), text]);
       });
       return;
     }
     const text = formatValue(key, value);
-    if (text !== null) out.facts.push([humanise(key), text]);
+    if (text !== null) out.facts.push([factLabel(key), text]);
   });
 
   return out;

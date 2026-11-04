@@ -1,12 +1,14 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { LogoMark, ExternalIcon } from './Icons.jsx';
 import StatusPill from './StatusPill.jsx';
+import { useAnalystSession } from '../lib/admin.js';
 
 export const GITHUB_URL = 'https://github.com/pymikofficial/triageops';
 
 export default function Header() {
   const location = useLocation();
   const onDashboard = location.pathname === '/' || location.pathname.startsWith('/ticket/');
+  const { signedIn } = useAnalystSession();
 
   return (
     <header className="site-header">
@@ -22,6 +24,9 @@ export default function Header() {
           </Link>
           <NavLink to="/build" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
             How it was built
+          </NavLink>
+          <NavLink to="/analyst" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
+            {signedIn ? 'Analyst console' : 'Analyst sign in'}
           </NavLink>
           <a className="nav-link" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
             GitHub
