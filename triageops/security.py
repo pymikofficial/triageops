@@ -187,6 +187,9 @@ def _mask_name(name: str) -> str:
     return f"{parts[0]} {parts[-1][0]}."
 
 
+_NAME_AND_ADDRESS = re.compile(r"^\s*(.*?)\s*<([^<>]+)>\s*$")
+
+
 def _mask_contact(value: str) -> str:
     value = value.strip()
     if _EMAIL.match(value):
@@ -201,6 +204,11 @@ def mask_requester(contact: str | None, name: str | None = None) -> str | None:
     """Display form of a requester, for example ``Priya S. (pri***@nort***)``."""
     contact = (contact or "").strip()
     name = (name or "").strip()
+    # Email clients often send "Priya Shah <priya.shah@example.co.uk>".
+    display = _NAME_AND_ADDRESS.match(contact)
+    if display:
+        name = name or display.group(1).strip().strip('"')
+        contact = display.group(2).strip()
     masked_contact = _mask_contact(contact) if contact else ""
     masked_name = _mask_name(name) if name else ""
     if masked_name and masked_contact and masked_name != masked_contact:

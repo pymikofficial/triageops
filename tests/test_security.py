@@ -203,3 +203,13 @@ def test_sliding_window_limiter() -> None:
 )
 def test_find_injection_marker(text: str, flagged: bool) -> None:
     assert (find_injection_marker(text) is not None) is flagged
+
+
+def test_mask_requester_splits_name_and_address() -> None:
+    from triageops.security import mask_requester
+
+    masked = mask_requester("Priya Shah <priya.shah@harbourdental.co.uk>")
+    assert masked is not None
+    assert "harbourdental" not in masked
+    assert masked.startswith("Priya")
+    assert "pri***@harb***" in masked
