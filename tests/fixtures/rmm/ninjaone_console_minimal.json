@@ -1,0 +1,17 @@
+{
+  "id": 12345,
+  "activityTime": 1703123456,
+  "deviceId": 67890,
+  "severity": "CRITICAL",
+  "priority": "HIGH",
+  "seriesUid": "6bcedd3a-fe26-4bcb-9ce9-d3850e38d42c",
+  "activityType": "CONDITION",
+  "statusCode": "TRIGGERED",
+  "activityResult": "SUCCESS",
+  "sourceConfigUid": "0d6a1c55-3e8f-4a51-b1d2-6f0b2e9c7a10",
+  "sourceName": "Device Offline",
+  "subject": "Device is offline",
+  "message": "WORKSTATION-001 has been offline for 5 minutes",
+  "type": "Alert",
+  "data": {}
+}

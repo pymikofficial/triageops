@@ -1,0 +1,35 @@
+{
+  "alertUid": "b2e4d6f8-0a1c-4e3f-9d5b-7c9e1a3f5b70",
+  "priority": "Critical",
+  "diagnostics": "Device has gone offline",
+  "resolved": false,
+  "resolvedBy": null,
+  "resolvedOn": null,
+  "muted": false,
+  "ticketNumber": null,
+  "timestamp": 1793804400000,
+  "alertMonitorInfo": {
+    "sendsEmails": true,
+    "createsTicket": false
+  },
+  "alertContext": {
+    "@class": "online_offline_status_ctx",
+    "status": "OFFLINE"
+  },
+  "alertSourceInfo": {
+    "deviceUid": "3c7a9e1b-5d2f-4a8c-b6e0-1f4d7a2c9e83",
+    "deviceName": "ACME-LT042",
+    "siteUid": "9a3b7e2c-1f44-4c6d-8e0a-55d2b1c9f310",
+    "siteName": "Acme Ltd - Head Office"
+  },
+  "responseActions": [
+    {
+      "actionTime": 1793804401000,
+      "actionType": "WEBHOOK_EXECUTED",
+      "description": "Webhook sent",
+      "actionReference": null,
+      "actionReferenceInt": null
+    }
+  ],
+  "autoresolveMins": 60
+}
