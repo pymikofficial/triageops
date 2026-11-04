@@ -64,7 +64,15 @@ class TestTimestampedSignature:
 
     @pytest.mark.parametrize(
         ("timestamp", "signature"),
-        [(None, "sha256=abc"), (str(NOW), None), ("12e9", "sha256=abc"), (str(NOW), "abc")],
+        [
+            (None, "sha256=abc"),
+            (str(NOW), None),
+            ("12e9", "sha256=abc"),
+            (str(NOW), "abc"),
+            # str.isdigit accepts these two but int() raises, so they must be refused before the conversion.
+            ("\u00b2", "sha256=abc"),
+            ("9" * 4400, "sha256=abc"),
+        ],
     )
     def test_rejects_missing_or_malformed_headers(self, timestamp: str | None, signature: str | None) -> None:
         with pytest.raises(SignatureError):

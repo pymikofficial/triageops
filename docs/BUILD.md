@@ -96,7 +96,7 @@ Out of scope for the demo are dashboard login, two way PSA sync and sending repl
 
 **Data flow for RAG.** Twelve MSP runbooks in `kb_seed.py` (thirty since Level 2, see below) (`vpn-error-809`, `ransomware-first-response`, `phishing-link-clicked` and others) are embedded in one batch the first time `GET /api/health` finds the table empty, inside `pg_try_advisory_xact_lock` with `on conflict (slug) do nothing`, so concurrent cold starts seed once. At triage time the top three matches by cosine similarity go to Claude inside `<knowledge_base>` tags, and only slugs that were actually retrieved are stored in `kb_refs`, so an invented citation never reaches the dashboard.
 
-**Verify.** `GET /api/health` returns `"db":true`, `"ai":true`, `"kb_articles":12`. The ticket drawer shows the events in pipeline order.
+**Verify.** `GET /api/health` returns `"db":true`, `"ai":true`, `"kb_articles":12` (30 since Level 2). The ticket drawer shows the events in pipeline order.
 
 ## 3. AI
 
@@ -328,11 +328,11 @@ Version 1.1.0 adds four pieces of work. Each was built on its own branch against
 | Hybrid knowledge base and operations view | Postgres full text search fused with pgvector by reciprocal rank fusion, 18 new runbooks for 30 in all, an `/ops` page with cost, latency, model mix and SLA breaches, and JSON logs with an `X-Request-ID` on every response | [hybrid-kb-and-ops.md](https://github.com/pymikofficial/triageops/blob/main/docs/level2/hybrid-kb-and-ops.md) |
 | MSP integrations | NinjaOne and Datto RMM alerts through a signed n8n relay, with repeat alerts collapsed into one ticket and the RMM severity shown to Claude as a hint, HaloPSA and Autotask ticket creation after triage with retries that never duplicate, and Microsoft Teams Adaptive Cards for alerts | [msp-integrations.md](https://github.com/pymikofficial/triageops/blob/main/docs/level2/msp-integrations.md) |
 
-**Where the branches met.** `app.py` (two routers and the request context middleware), `App.jsx` and `Header.jsx` (three routes and links), `api.js` (extra headers and the request id), `events.js` (timeline labels for analyst, RMM and PSA events), `triage.py` (the retrieval method, the priority hint and the PSA sync step), `.env.example` and the migrations folder. Two branches had both numbered their migration 004, so hybrid search keeps `004_hybrid_kb_search.sql` and the RMM channel became `005_rmm_channel.sql`. The evaluation dataset covers the four channels people write in, and the new `rmm` channel has its own fixtures under `tests/fixtures/rmm`.
+**Where the branches met.** `app.py` (three routers and the request context middleware), `App.jsx` and `Header.jsx` (three routes and links), `api.js` (extra headers and the request id), `events.js` (timeline labels for analyst, RMM and PSA events), `triage.py` (the retrieval method, the priority hint and the PSA sync step), `.env.example` and the migrations folder. Two branches had both numbered their migration 004, so hybrid search keeps `004_hybrid_kb_search.sql` and the RMM channel became `005_rmm_channel.sql`. The evaluation dataset covers the four channels people write in, and the new `rmm` channel has its own fixtures under `tests/fixtures/rmm`.
 
 **Owner actions.** Apply `004_hybrid_kb_search.sql` and `005_rmm_channel.sql` in the Supabase SQL editor, add `ADMIN_TOKEN` and any integration variables from `.env.example` to the Vercel project, redeploy, open `/api/health` until it reports 30 knowledge base articles, and add the `ANTHROPIC_API_KEY` repository secret before running the Evals workflow. The release pull request lists every step.
 
-**Verify.** `ruff check triageops tests evals --select E,F,I --ignore E501`, `pytest -q` and `npm run build` pass. The suite grew from 189 to 892 tests, all offline.
+**Verify.** `ruff check triageops tests evals --select E,F,I --ignore E501`, `pytest -q` and `npm run build` pass. The suite grew from 189 to 896 tests, all offline.
 
 ## What production at an MSP would add
 

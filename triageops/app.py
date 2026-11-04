@@ -225,9 +225,11 @@ def _kb_count_seeding_if_empty(conn: Connection) -> int:
         try:
             inserted = kb_seed.seed_if_due(conn)
         except EmbeddingError as exc:
+            # The articles already in the table are still there, so report them.
             logger.warning("knowledge base seeding failed: %s", exc)
-            return 0
-        logger.info("seeded %d knowledge base articles", inserted)
+            return count
+        if inserted:
+            logger.info("seeded %d knowledge base articles", inserted)
         count = store.kb_count(conn)
     return count
 

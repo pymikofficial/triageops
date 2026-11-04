@@ -62,7 +62,7 @@ When NinjaOne `severity` is NONE or missing, its `priority` is used instead (HIG
 **Datto RMM template.** Use this as the raised payload of a Global Webhook, with Content Type `text/plain` so the n8n relay receives the text even when a value breaks the JSON. For the resolved payload use the same body with `"event":"resolved"`, or send resolved alerts to a separate URL ending in `&event=resolved`, which the relay applies over any event value in the body.
 
 ```json
-{"source":"datto_rmm","event":"triggered","alert_uid":"[alert_uid]","priority":"[alert_priority]","alert_type":"[alert_type]","alert_category":"[alert_category]","alert_message":"[alert_message]","device_uid":"[device_uid]","device_hostname":"[device_hostname]","site_uid":"[site_uid]","site_name":"[site_name]"}
+{"source":"datto_rmm","event":"triggered","alert_uid":"[alert_uid]","priority":"[alert_priority]","alert_type":"[alert_type]","alert_category":"[alert_category]","alert":"[alert]","alert_message":"[alert_message]","device_uid":"[device_uid]","device_hostname":"[device_hostname]","site_name":"[site_name]","platform":"[platform]"}
 ```
 
 **Try it locally.**

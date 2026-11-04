@@ -19,4 +19,4 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["triageops"]
+packages = ["triageops", "triageops.rmm", "triageops.psa"]

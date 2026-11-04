@@ -37,7 +37,7 @@ cron (host)   02:30 backup.sh     pg_dump | gzip, 14 day retention, optional off
 
 ## 15 minute runbook
 
-You need a domain you control, an SSH key pair, and the values for `.env` (see `.env.example` in the repository root). The database must already have `supabase/migrations/001_init.sql` and `002_role.sql` applied.
+You need a domain you control, an SSH key pair, and the values for `.env` (see `.env.example` in the repository root). The database must already have every file in `supabase/migrations/` applied in order, `001_init.sql` to `005_rmm_channel.sql`.
 
 **Minute 0 to 2. Create the server.** Ubuntu 24.04 LTS with 2 vCPU and 2 to 4 GB RAM is plenty (a small Hetzner Cloud server or DigitalOcean droplet). Add your SSH public key at creation time so it lands in `/root/.ssh/authorized_keys`. Note the public IPv4 address.
 

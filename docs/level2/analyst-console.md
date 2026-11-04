@@ -92,7 +92,7 @@ Cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixe
 ## Testing
 
 ```bash
-ruff check triageops tests --select E,F,I --ignore E501
+ruff check triageops tests evals --select E,F,I --ignore E501
 pytest -q
 npm run build
 ```

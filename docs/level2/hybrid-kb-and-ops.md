@@ -131,9 +131,9 @@ Small edits to shared files: `app.py` (logging setup, router, middleware, seedin
 ## Testing
 
 ```bash
-ruff check triageops tests --select E,F,I --ignore E501
+ruff check triageops tests evals --select E,F,I --ignore E501
 pytest -q
 npm run build
 ```
 
-295 tests pass, the original 189 plus 106 new, all offline with no network and no database.
+This change adds 106 tests (295 on its own branch, 896 on the Level 2 release branch), all offline with no network and no database.

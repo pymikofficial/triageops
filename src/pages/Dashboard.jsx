@@ -129,7 +129,7 @@ export default function Dashboard() {
         <div className="page-head">
           <h1 className="page-title">Service desk overview</h1>
           <p className="page-lede">
-            Tickets arrive by email, WhatsApp, the portal and signed webhooks. Claude sets the category, priority, team and
+            Tickets arrive by email, WhatsApp, the portal, signed webhooks and RMM alerts. Claude sets the category, priority, team and
             SLA for each one, grounded in the knowledge base, and drafts the first reply.
           </p>
         </div>

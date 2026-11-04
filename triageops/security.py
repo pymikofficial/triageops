@@ -55,7 +55,8 @@ def verify_timestamped_signature(
     if not timestamp or not signature:
         raise SignatureError("signature headers are missing")
     timestamp = timestamp.strip()
-    if not timestamp.isdigit():
+    # str.isdigit accepts other Unicode digits and int() refuses them, so match ASCII digits only.
+    if not re.fullmatch(r"[0-9]{1,20}", timestamp):
         raise SignatureError("timestamp is not a unix time in seconds")
     current = time.time() if now is None else now
     if abs(current - int(timestamp)) > window:

@@ -49,7 +49,17 @@ export const EVENT_TONE = {
 };
 
 // Fact labels that humanise would get wrong.
-const FACT_LABEL = { sla: 'SLA', sla_due_at: 'SLA due', by: 'By' };
+const FACT_LABEL = {
+  sla: 'SLA',
+  sla_due_at: 'SLA due',
+  by: 'By',
+  rmm_key: 'RMM key',
+  source_id: 'Source ID',
+  url: 'URL',
+  external_id: 'External ID',
+  external_ref: 'External reference',
+  psa_ref: 'PSA reference',
+};
 
 function factLabel(key) {
   return FACT_LABEL[key] || humanise(key);

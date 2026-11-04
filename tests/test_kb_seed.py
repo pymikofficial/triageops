@@ -143,6 +143,24 @@ def test_health_tops_up_a_database_seeded_with_the_original_twelve(
     assert response.json()["kb_articles"] == 30
 
 
+def test_health_reports_the_articles_it_has_when_a_top_up_fails(
+    fake_store: FakeStore, kb: FakeKb, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    kb.slugs = {article.slug for article in KB_ARTICLES[:12]}
+    kb.fail_on_batch = 1
+    monkeypatch.setattr(settings, "embed_secret", "test-embed-secret")
+    monkeypatch.setattr(store, "kb_count", lambda conn: len(kb.slugs))
+
+    @contextmanager
+    def connect() -> Any:
+        yield SeedConn()
+
+    monkeypatch.setattr(db, "connect", connect)
+    response = TestClient(app).get("/api/health")
+    assert response.status_code == 200
+    assert response.json()["kb_articles"] == 12
+
+
 def test_health_does_not_seed_a_full_knowledge_base(fake_store: FakeStore, kb: FakeKb, monkeypatch) -> None:
     monkeypatch.setattr(settings, "embed_secret", "test-embed-secret")
     fake_store.kb_articles = 30
