@@ -20,6 +20,9 @@ export default function Header() {
           <Link to="/" className={`nav-link${onDashboard ? ' is-active' : ''}`} aria-current={onDashboard ? 'page' : undefined}>
             Dashboard
           </Link>
+          <NavLink to="/ops" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
+            Operations
+          </NavLink>
           <NavLink to="/build" className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}>
             How it was built
           </NavLink>

@@ -21,7 +21,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel, ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import agent, channels, db, kb_seed, mcp, rag, store, triage
+from . import agent, channels, db, kb_seed, mcp, observability, ops, rag, store, triage
 from .config import VERSION, settings
 from .db import Connection, DatabaseUnavailable
 from .rag import EmbeddingError
@@ -40,7 +40,7 @@ from .security import (
 )
 from .taxonomy import CHANNELS, PRIORITIES, STATUSES
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+observability.configure_logging()
 logger = logging.getLogger("triageops")
 
 MAX_BODY_BYTES = 64 * 1024
@@ -203,9 +203,10 @@ def _enforce_demo_limits(conn: Connection, client_hash: str) -> None:
 
 def _kb_count_seeding_if_empty(conn: Connection) -> int:
     count = store.kb_count(conn)
-    if count == 0 and rag.is_configured():
+    # Also tops up a database seeded before newer articles were added.
+    if count < len(kb_seed.KB_ARTICLES) and rag.is_configured():
         try:
-            inserted = kb_seed.seed_kb(conn)
+            inserted = kb_seed.seed_if_due(conn)
         except EmbeddingError as exc:
             logger.warning("knowledge base seeding failed: %s", exc)
             return 0
@@ -401,3 +402,10 @@ def mcp_get() -> JSONResponse:
 @app.options(MCP_PATH)
 def mcp_preflight() -> Response:
     return Response(status_code=204)
+
+
+# Operations view and request ids ---------------------------------------------------
+
+app.include_router(ops.router)
+# Added last so it wraps every other middleware and each response carries X-Request-ID.
+app.add_middleware(observability.RequestContextMiddleware)
