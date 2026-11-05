@@ -1,8 +1,9 @@
 """Outbound alerts for P1, escalated and SLA breached tickets.
 
-One JSON body works for the common incoming webhooks: Slack and Teams read
-``text`` and Discord reads ``content``, and each ignores the other key. Alerts
-carry the masked ticket metadata only, never the ticket body.
+The body format follows the webhook host (see ``alert_formats``): Slack and
+Discord get plain text, Teams gets an Adaptive Card, and any other host gets
+``{"text": ..., "content": ...}`` as before. Alerts carry the masked ticket
+metadata only, never the ticket body.
 """
 
 import logging
@@ -12,6 +13,7 @@ from typing import Any, Literal
 
 import httpx
 
+from . import alert_formats
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -56,11 +58,23 @@ def send_alert(ticket: dict[str, Any], reason: str) -> AlertResult:
     if not url.startswith("https://"):
         return AlertResult("failed", {"stage": "alert", "reason": "ALERT_WEBHOOK_URL must use https"})
 
-    message = format_alert(ticket, reason)
+    fmt = alert_formats.detect_format(url, alert_formats.alert_format_settings.format)
+    payload = _payload(ticket, reason, fmt)
     try:
-        response = httpx.post(url, json={"text": message, "content": message}, timeout=ALERT_TIMEOUT_SECONDS)
+        response = httpx.post(url, json=payload, timeout=ALERT_TIMEOUT_SECONDS)
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        logger.warning("alert failed ref=%s error=%s", ticket.get("ref"), type(exc).__name__)
-        return AlertResult("failed", {"stage": "alert", "reason": f"alert webhook failed ({type(exc).__name__})"})
-    return AlertResult("sent", {"reason": reason, "status_code": response.status_code})
+        logger.warning("alert failed ref=%s format=%s error=%s", ticket.get("ref"), fmt, type(exc).__name__)
+        reason_text = f"alert webhook failed ({type(exc).__name__})"
+        return AlertResult("failed", {"stage": "alert", "reason": reason_text, "format": fmt})
+    return AlertResult("sent", {"reason": reason, "status_code": response.status_code, "format": fmt})
+
+
+def _payload(ticket: dict[str, Any], reason: str, fmt: alert_formats.AlertFormat) -> dict[str, Any]:
+    """The body for ``fmt``, or the generic body if building it fails, so an alert still goes out."""
+    try:
+        return alert_formats.build_payload(ticket, reason, fmt, app_url=alert_formats.alert_format_settings.public_app_url)
+    except Exception as exc:
+        logger.warning("alert payload failed ref=%s format=%s error=%s", ticket.get("ref"), fmt, type(exc).__name__)
+        message = format_alert(ticket, reason)
+        return {"text": message, "content": message}

@@ -1,6 +1,6 @@
 {
   "name": "triageops",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "TriageOps, an AI service desk demo for IT MSPs, built with Claude. Built by Soumik Chatterjee.",
   "type": "module",

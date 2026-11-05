@@ -1,0 +1,7 @@
+{
+  "event": "triggered",
+  "alert_uid": "[alert_uid]",
+  "priority": "[alert_priority]",
+  "device_hostname": "[device_hostname]",
+  "alert_message": "[alert_message]"
+}

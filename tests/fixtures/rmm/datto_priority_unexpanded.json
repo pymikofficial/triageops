@@ -1,0 +1,14 @@
+{
+  "event": "triggered",
+  "alert_uid": "1d7e3a5c-9b2f-4c8e-a6d0-3f5b7e9c1a24",
+  "priority": "[alert_priority]",
+  "alert_type": "Service Status",
+  "alert_category": "Service",
+  "alert": "Service Spooler is stopped",
+  "alert_message": "The Print Spooler service is not running",
+  "device_uid": "0d8e5c1a-77b2-4f0e-a6c4-2b9f31d4e7aa",
+  "device_hostname": "ACME-FS01",
+  "device_os": "[device_os]",
+  "site_name": "[sitename]",
+  "platform": "merlot"
+}

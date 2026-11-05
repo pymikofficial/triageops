@@ -228,6 +228,7 @@ button:disabled {
 }
 
 .site-nav {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -3006,11 +3007,10 @@ a.stage-link:hover .stage-number {
 
 }
 
-@media (max-width: 760px) {
-  :root {
-    --gutter: 16px;
-  }
-
+/* Six navigation links no longer fit beside the brand and tagline on a tablet, so the
+   header wraps below 960px: brand and status on the first row, then the tagline, then
+   the links, which wrap onto a second line on a phone rather than scrolling off screen. */
+@media (max-width: 960px) {
   .header-inner {
     flex-wrap: wrap;
     gap: 8px 12px;
@@ -3031,12 +3031,19 @@ a.stage-link:hover .stage-number {
   .site-nav {
     order: 4;
     flex-basis: 100%;
+    flex-wrap: wrap;
+    row-gap: 2px;
     margin-left: -10px;
-    overflow-x: auto;
   }
 
   .status-pill {
     margin-left: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --gutter: 16px;
   }
 
   .page-head {

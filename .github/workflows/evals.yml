@@ -1,0 +1,71 @@
+name: Evals
+
+# Manual only. Each run calls the Claude API once per ticket, so it costs money
+# (a few US cents for the full 60 ticket set on claude-haiku-5-5).
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Triage model"
+        required: false
+        default: "claude-haiku-5-5"
+      limit:
+        description: "Only run the first N tickets (leave empty for all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evals
+  cancel-in-progress: false
+
+jobs:
+  eval:
+    name: Triage evaluation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Inputs reach the script through environment variables, never through
+      # ${{ }} inside the shell, so a crafted input cannot inject commands.
+      - name: Run the evaluation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EVAL_MODEL: ${{ inputs.model }}
+          EVAL_LIMIT: ${{ inputs.limit }}
+        run: |
+          args=(--model "${EVAL_MODEL:-claude-haiku-5-5}" --concurrency 4)
+          if [ -n "$EVAL_LIMIT" ]; then
+            args+=(--limit "$EVAL_LIMIT")
+          fi
+          python evals/run_eval.py "${args[@]}"
+
+      - name: Add the report to the job summary
+        if: always()
+        run: |
+          if [ -f evals/results/latest.md ]; then
+            cat evals/results/latest.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results-${{ github.run_id }}
+          path: |
+            evals/results/latest.json
+            evals/results/latest.md
+          if-no-files-found: warn
+          retention-days: 90

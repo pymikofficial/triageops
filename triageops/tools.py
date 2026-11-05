@@ -127,7 +127,8 @@ def _search_knowledge_base(conn: Connection, args: SearchKnowledgeBaseArguments)
         {"slug": m.slug, "title": m.title, "category": m.category, "similarity": round(m.similarity, 3), "content": m.content}
         for m in matches
     ]
-    return {"method": "semantic", "articles": articles}
+    hybrid = any(m.retrieval == "hybrid" for m in matches)
+    return {"method": "hybrid" if hybrid else "semantic", "articles": articles}
 
 
 _OBJECT = {"type": "object", "additionalProperties": False}

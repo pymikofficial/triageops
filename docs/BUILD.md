@@ -94,9 +94,9 @@ Out of scope for the demo are dashboard login, two way PSA sync and sending repl
 5. Claude triages through forced tool use, `rules.py` applies the business rules and SLA, and the ticket is updated to `triaged` or `escalated`.
 6. P1 or escalated tickets fire the alert webhook. Every step writes a `ticket_events` row.
 
-**Data flow for RAG.** Twelve MSP runbooks in `kb_seed.py` (`vpn-error-809`, `ransomware-first-response`, `phishing-link-clicked` and others) are embedded in one batch the first time `GET /api/health` finds the table empty, inside `pg_try_advisory_xact_lock` with `on conflict (slug) do nothing`, so concurrent cold starts seed once. At triage time the top three matches by cosine similarity go to Claude inside `<knowledge_base>` tags, and only slugs that were actually retrieved are stored in `kb_refs`, so an invented citation never reaches the dashboard.
+**Data flow for RAG.** Twelve MSP runbooks in `kb_seed.py` (thirty since Level 2, see below) (`vpn-error-809`, `ransomware-first-response`, `phishing-link-clicked` and others) are embedded in one batch the first time `GET /api/health` finds the table empty, inside `pg_try_advisory_xact_lock` with `on conflict (slug) do nothing`, so concurrent cold starts seed once. At triage time the top three matches by cosine similarity go to Claude inside `<knowledge_base>` tags, and only slugs that were actually retrieved are stored in `kb_refs`, so an invented citation never reaches the dashboard.
 
-**Verify.** `GET /api/health` returns `"db":true`, `"ai":true`, `"kb_articles":12`. The ticket drawer shows the events in pipeline order.
+**Verify.** `GET /api/health` returns `"db":true`, `"ai":true`, `"kb_articles":12` (30 since Level 2). The ticket drawer shows the events in pipeline order.
 
 ## 3. AI
 
@@ -312,19 +312,39 @@ $$;
 2. `test_rules.py`. Every business rule, including the encrypted-file how-to that must stay low priority and injection the model missed.
 3. `test_triage.py`. Repair of model output, the forced and fenced Claude call, masking before storage and before Claude, the fallback, embedding failure, idempotent retries.
 4. `test_api.py`. Every route, status code and header, the honeypot, rate limits, body caps, signatures over exact raw bytes.
-5. `test_mcp.py`, `test_agent.py`, `test_content.py`. JSON-RPC errors and auth, the agent loop, the twelve articles, and the test script signing exactly like the server.
+5. `test_mcp.py`, `test_agent.py`, `test_content.py`. JSON-RPC errors and auth, the agent loop, the thirty articles, and the test script signing exactly like the server.
+6. Level 2 adds `test_admin_*.py`, `test_evals.py`, `test_hybrid.py`, `test_kb_seed.py`, `test_ops.py`, `test_observability.py`, `test_retrieval_quality.py`, `test_rmm_*.py`, `test_psa_*.py`, `test_alert_formats.py`, `test_priority_hint.py`, `test_n8n_workflows.py` and `test_logging.py`, all offline with a fake store, a fake Claude and a mock PSA server.
 
 **Reliability.** The ticket is written before any external call, and a crash mid-pipeline marks it `failed` rather than losing it. Every external call has a timeout (embeddings 8 seconds, Claude 25 with one retry, alerts 5, database connect 5 per URL) and degrades on its own. `GET /api/health` returns 503 when the database is down, for monitors and the Docker healthcheck.
 
+## Level 2
+
+Version 1.1.0 adds four pieces of work. Each was built on its own branch against the same contract, then merged one at a time into one release branch, with the lint, tests and build run after every merge. Each has a guide in `docs/level2/` that covers the owner actions, the endpoints, the files changed and the tests.
+
+| Addition | What it does | Guide |
+|---|---|---|
+| Analyst console | A signed in analyst approves the draft reply, overrides the priority or team with a reason, resolves a ticket and reopens it. Every action is an audit event on the public timeline, and every override is exported next to Claude's original decision as a gold label. `/analyst`, `/api/admin/*`, `ADMIN_TOKEN` | [analyst-console.md](https://github.com/pymikofficial/triageops/blob/main/docs/level2/analyst-console.md) |
+| Evaluation harness | 60 labelled UK MSP tickets and a runner that scores category, priority, team and injection detection, with latency, tokens and cost per ticket. P1 recall is the release gate. Results render at `/evals`, and a manual GitHub Actions workflow runs the set against Claude | [eval-harness.md](https://github.com/pymikofficial/triageops/blob/main/docs/level2/eval-harness.md) |
+| Hybrid knowledge base and operations view | Postgres full text search fused with pgvector by reciprocal rank fusion, 18 new runbooks for 30 in all, an `/ops` page with cost, latency, model mix and SLA breaches, and JSON logs with an `X-Request-ID` on every response | [hybrid-kb-and-ops.md](https://github.com/pymikofficial/triageops/blob/main/docs/level2/hybrid-kb-and-ops.md) |
+| MSP integrations | NinjaOne and Datto RMM alerts through a signed n8n relay, with repeat alerts collapsed into one ticket and the RMM severity shown to Claude as a hint, HaloPSA and Autotask ticket creation after triage with retries that never duplicate, and Microsoft Teams Adaptive Cards for alerts | [msp-integrations.md](https://github.com/pymikofficial/triageops/blob/main/docs/level2/msp-integrations.md) |
+
+**Where the branches met.** `app.py` (three routers and the request context middleware), `App.jsx` and `Header.jsx` (three routes and links), `api.js` (extra headers and the request id), `events.js` (timeline labels for analyst, RMM and PSA events), `triage.py` (the retrieval method, the priority hint and the PSA sync step), `.env.example` and the migrations folder. Two branches had both numbered their migration 004, so hybrid search keeps `004_hybrid_kb_search.sql` and the RMM channel became `005_rmm_channel.sql`. The evaluation dataset covers the four channels people write in, and the new `rmm` channel has its own fixtures under `tests/fixtures/rmm`.
+
+**Owner actions.** Apply `004_hybrid_kb_search.sql` and `005_rmm_channel.sql` in the Supabase SQL editor, add `ADMIN_TOKEN` and any integration variables from `.env.example` to the Vercel project, redeploy, open `/api/health` until it reports 30 knowledge base articles, and add the `ANTHROPIC_API_KEY` repository secret before running the Evals workflow. The release pull request lists every step.
+
+**Verify.** `ruff check triageops tests evals --select E,F,I --ignore E501`, `pytest -q` and `npm run build` pass. The suite grew from 189 to 896 tests, all offline.
+
 ## What production at an MSP would add
 
-1. Entra ID single sign-on, analyst and client roles, and per-client row level security.
-2. Two way sync with ConnectWise PSA, Autotask or HaloPSA, and alert intake from NinjaOne or Datto RMM.
+Level 2 delivered the analyst console, one way ticket creation in HaloPSA and Autotask, NinjaOne and Datto RMM alert intake, the evaluation set with P1 recall as the gate, hybrid search and cost per ticket reporting. This is what remains.
+
+1. Entra ID single sign-on, analyst and client roles, and per-client row level security. The analyst console uses one shared token today.
+2. Two way sync with the PSA, so status and notes flow back, and a ConnectWise PSA adapter.
 3. A queue and worker with retries and a dead letter queue, so intake never waits on the model.
-4. An evaluation set of labelled past tickets run on every prompt or model change, with P1 recall as the release gate.
-5. Analyst-approved replies sent through email and WhatsApp templates.
-6. Knowledge base sync from IT Glue or Hudu, and hybrid keyword and vector search.
-7. OpenTelemetry tracing, cost per ticket reporting, point-in-time recovery and secrets in a vault.
+4. Real labelled history in the evaluation set, and a scheduled run so every prompt or model change is scored without a manual step.
+5. Analyst-approved replies sent through email and WhatsApp templates. Today an approved reply is recorded but not sent.
+6. Knowledge base sync from IT Glue or Hudu.
+7. OpenTelemetry tracing, point-in-time recovery and secrets in a vault.
 8. Data processing agreements, a retention schedule, and Cyber Essentials Plus and ISO 27001 alignment.
 
 ## JD coverage map
@@ -365,7 +385,11 @@ $$;
 | WhatsApp | Cloud API handshake and signature | `/api/webhooks/whatsapp` |
 | IT MSP context | Taxonomy, teams, SLAs, runbooks, UK SME samples | `taxonomy.py`, `kb_seed.py` |
 | Security and reliability | Threat model, fallback, idempotency, tests | Section 10 |
-| Documentation | This file, README, VPS runbook | `docs/`, `README.md`, `deploy/README.md` |
+| Documentation | This file, README, VPS runbook, four Level 2 guides | `docs/`, `README.md`, `deploy/README.md`, `docs/level2/` |
+| Human in the loop | Analyst console, audit events, overrides export | `admin.py`, `/analyst` |
+| Evaluation | 60 labelled tickets, P1 recall gate, cost per ticket | `evals/`, `/evals` |
+| RMM and PSA | NinjaOne, Datto RMM, HaloPSA, Autotask, Teams cards | `triageops/rmm/`, `triageops/psa/`, `alert_formats.py` |
+| Observability | JSON logs, request ids, operations view | `observability.py`, `ops.py`, `/ops` |
 
 ## Build log
 

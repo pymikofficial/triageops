@@ -26,7 +26,7 @@ Team = Literal[
     "Cloud & M365",
     "Account Management",
 ]
-Channel = Literal["email", "whatsapp", "webhook", "portal"]
+Channel = Literal["email", "whatsapp", "webhook", "portal", "rmm"]
 Status = Literal["new", "triaged", "escalated", "resolved", "failed"]
 
 CATEGORIES: Final[tuple[str, ...]] = get_args(Category)

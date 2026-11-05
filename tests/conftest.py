@@ -19,6 +19,7 @@ from fakes import (  # noqa: E402
 
 from triageops import db, rag, store  # noqa: E402
 from triageops.config import settings  # noqa: E402
+from triageops.psa.config import psa_settings  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -37,6 +38,12 @@ def isolated_settings(monkeypatch: pytest.MonkeyPatch) -> None:
         "database_urls": [],
     }.items():
         monkeypatch.setattr(settings, name, value)
+
+
+@pytest.fixture(autouse=True)
+def psa_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test reaches a real PSA, even when the shell sets PSA_PROVIDER. PSA tests opt in."""
+    monkeypatch.setattr(psa_settings, "provider", "")
 
 
 @pytest.fixture

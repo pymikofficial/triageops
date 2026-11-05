@@ -29,7 +29,7 @@ jobs:
         run: pip install -r requirements.txt pytest ruff
 
       - name: Lint
-        run: ruff check triageops tests --select E,F,I --ignore E501
+        run: ruff check triageops tests evals --select E,F,I --ignore E501
 
       - name: Tests (no network, fake DB and fake Claude)
         run: pytest -q

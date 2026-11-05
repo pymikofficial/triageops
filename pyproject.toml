@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "triageops"
-version = "1.0.0"
+version = "1.1.0"
 description = "AI service desk for IT MSPs, built with Claude"
 readme = "README.md"
 license = { text = "MIT" }
@@ -19,4 +19,4 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["triageops"]
+packages = ["triageops", "triageops.rmm", "triageops.psa"]

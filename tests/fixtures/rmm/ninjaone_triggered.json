@@ -1,0 +1,53 @@
+{
+  "id": 48213377,
+  "activityTime": 1793805137.418226,
+  "deviceId": 1042,
+  "severity": "MAJOR",
+  "priority": "HIGH",
+  "seriesUid": "3f6c2a9e-8b1d-4c57-9e2a-7d0b6f41c8a3",
+  "activityType": "CONDITION",
+  "statusCode": "TRIGGERED",
+  "status": "Triggered",
+  "activityResult": "SUCCESS",
+  "sourceConfigUid": "b7e4d1c0-2f9a-4e6b-8d35-91a0c7f2e614",
+  "sourceName": "Disk Free Space < 10%",
+  "subject": "Disk free space low",
+  "message": "Disk C: free space is 6.2% (below 10% threshold) on ACME-FS01",
+  "type": "Condition",
+  "data": {
+    "message": {
+      "code": "condition_triggered",
+      "params": {
+        "volume": "C:",
+        "freePercent": "6.2"
+      }
+    }
+  },
+  "device": {
+    "id": 1042,
+    "organizationId": 17,
+    "locationId": 31,
+    "nodeClass": "WINDOWS_SERVER",
+    "nodeRoleId": 2,
+    "policyId": 9,
+    "approvalStatus": "APPROVED",
+    "offline": false,
+    "displayName": "ACME-FS01",
+    "systemName": "ACME-FS01",
+    "dnsName": "acme-fs01.acme.local",
+    "netbiosName": "ACME-FS01",
+    "created": 1761210000.0,
+    "lastContact": 1793805120.55,
+    "lastUpdate": 1793805101.2,
+    "references": {
+      "organization": {
+        "id": 17,
+        "name": "Acme Ltd"
+      },
+      "location": {
+        "id": 31,
+        "name": "Head Office"
+      }
+    }
+  }
+}

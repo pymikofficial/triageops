@@ -1,11 +1,13 @@
 // Thin client for the TriageOps REST API. Every call is same origin under /api.
 
 export class ApiError extends Error {
-  constructor(message, status = 0, body = null) {
+  constructor(message, status = 0, body = null, requestId = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
+    // The server's X-Request-ID, so a failure can be matched to its log lines.
+    this.requestId = requestId;
   }
 }
 
@@ -20,7 +22,7 @@ function messageFrom(data, status) {
   return `The service returned status ${status}`;
 }
 
-export async function apiFetch(path, { method = 'GET', body, timeout = 20000, signal } = {}) {
+export async function apiFetch(path, { method = 'GET', body, timeout = 20000, signal, headers: extraHeaders } = {}) {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -34,7 +36,7 @@ export async function apiFetch(path, { method = 'GET', body, timeout = 20000, si
   }
 
   try {
-    const headers = { Accept: 'application/json' };
+    const headers = { Accept: 'application/json', ...extraHeaders };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const res = await fetch(path, {
       method,
@@ -52,8 +54,9 @@ export async function apiFetch(path, { method = 'GET', body, timeout = 20000, si
         data = null;
       }
     }
-    if (!res.ok) throw new ApiError(messageFrom(data, res.status), res.status, data);
-    if (data === null) throw new ApiError('The service returned an empty response', res.status);
+    const requestId = res.headers.get('X-Request-ID');
+    if (!res.ok) throw new ApiError(messageFrom(data, res.status), res.status, data, requestId);
+    if (data === null) throw new ApiError('The service returned an empty response', res.status, null, requestId);
     return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;
@@ -82,6 +85,7 @@ export const api = {
   ticket: (ref, opts) => apiFetch(`/api/tickets/${encodeURIComponent(ref)}`, opts),
   createDemoTicket: (payload, opts) =>
     apiFetch('/api/demo/tickets', { method: 'POST', body: payload, timeout: 65000, ...opts }),
+  opsMetrics: (days, opts) => apiFetch(`/api/ops/metrics${query({ days })}`, opts),
   chat: (messages, opts) =>
     apiFetch('/api/chat', { method: 'POST', body: { messages }, timeout: 65000, ...opts }),
 };

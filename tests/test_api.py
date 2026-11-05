@@ -42,7 +42,7 @@ def signed_headers(raw: bytes, timestamp: int | None = None, secret: str = WEBHO
 def test_health_reports_status_with_security_headers(client: TestClient) -> None:
     response = client.get("/api/health")
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "version": "1.0.0", "db": True, "ai": False, "kb_articles": 12, "region": "local"}
+    assert response.json() == {"ok": True, "version": "1.1.0", "db": True, "ai": False, "kb_articles": 12, "region": "local"}
     headers = response.headers
     assert "default-src 'self'" in headers["content-security-policy"]
     assert headers["x-content-type-options"] == "nosniff"
