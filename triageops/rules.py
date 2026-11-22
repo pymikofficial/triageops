@@ -36,6 +36,28 @@ def find_critical_security_trigger(text: str) -> str | None:
     return match.group(0) if match else None
 
 
+# A whole site losing its connection. Both halves must appear, so a whole office
+# printer, one user's home broadband or wifi that drops now and then stays below P1.
+_SITE_SCOPE = re.compile(
+    r"(?i)\b(?:whole|entire)\s+(?:\w+\s+)?(?:office|depot|branch|site|building)\b"
+    r"|\b(?:both|all)\s+(?:of\s+)?(?:our\s+|the\s+)?(?:branches|offices|sites|depots)\b"
+    r"|\b(?:nobody|no\s+one)\s+in\s+the\s+(?:\w+\s+)?(?:office|depot|branch|site)\b"
+)
+_CONNECTIVITY_LOST = re.compile(
+    r"(?i)\bno\s+(?:\w+\s+)?(?:internet|wi-?fi|phones?|broadband)\b"
+    r"|\b(?:internet|wi-?fi|phones?|broadband)\b[\w\s,']{0,25}?\b(?:down|off|dead)\b"
+)
+
+
+def find_site_outage_trigger(text: str) -> dict[str, str] | None:
+    """Return the matched scope and connectivity wording when a whole site is offline."""
+    scope = _SITE_SCOPE.search(text)
+    lost = _CONNECTIVITY_LOST.search(text) if scope else None
+    if not (scope and lost):
+        return None
+    return {"scope": scope.group(0), "connectivity": lost.group(0)}
+
+
 @dataclass
 class RuleOutcome:
     decision: TriageDecision
@@ -68,6 +90,17 @@ def apply_business_rules(
             )
         )
         final.priority, final.team = "P1", "Security Ops"
+
+    outage = find_site_outage_trigger(text)
+    if outage and final.priority != "P1":
+        events.append(
+            _rule(
+                "site_outage_p1",
+                "A whole site without internet, wifi or phones is always P1",
+                {**outage, "from": final.priority, "to": "P1"},
+            )
+        )
+        final.priority = "P1"
 
     if final.category == "Security" and final.priority in ("P3", "P4"):
         events.append(

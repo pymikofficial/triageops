@@ -456,7 +456,7 @@ def test_cli_exits_1_when_the_gate_fails(
     tmp_path: Path, dataset: list[harness.Case], monkeypatch: pytest.MonkeyPatch, no_embeddings: None
 ) -> None:
     fake = oracle_for(dataset)
-    calm = next(c for c in dataset if "tricky:calm-critical" in c.tags and c.category == "Network")
+    calm = next(c for c in dataset if "tricky:calm-critical" in c.tags and c.category == "Security")
     fake.answers[calm.subject] = {**fake.answers[calm.subject], "priority": "P3"}
     monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
     monkeypatch.setattr(triage, "_client", lambda key: fake)
