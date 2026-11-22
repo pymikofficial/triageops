@@ -148,7 +148,7 @@ if final.category == "Security" and final.priority in ("P3", "P4"):
     final.priority = "P2"
 ```
 
-In order, ransomware, encrypted files or a confirmed breach force P1 for Security Ops, Security is never below P2, suspected injection goes to human review, P1 or `escalate=true` escalates and alerts, and `sla_due_at` is set 1, 4, 24 or 72 hours from receipt. The ransomware pattern needs a verb such as "have been" before "encrypted", so "how do I send an encrypted file" stays low priority.
+In order, ransomware, encrypted files or a confirmed breach force P1 for Security Ops, a whole site without internet, wifi or phones forces P1 and keeps the model's team (`site_outage_p1`, added 22 Nov after the first Claude eval run), Security is never below P2, suspected injection goes to human review, P1 or `escalate=true` escalates and alerts, and `sla_due_at` is set 1, 4, 24 or 72 hours from receipt. The ransomware pattern needs a verb such as "have been" before "encrypted", so "how do I send an encrypted file" stays low priority.
 
 **Fallback.** If Claude fails (no key, 25 second timeout, HTTP error, no tool call), `heuristic_triage` classifies with ordered keyword patterns and writes a templated reply, with `ai_model = rules-fallback`, confidence 0.3 and an `error` event giving the reason. The same rules then run.
 

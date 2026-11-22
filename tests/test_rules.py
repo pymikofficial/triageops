@@ -1,11 +1,17 @@
 """The deterministic business rules that run after every triage."""
 
+import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
 from triageops.decision import TriageDecision
-from triageops.rules import INJECTION_REASON, apply_business_rules
+from triageops.rules import (
+    INJECTION_REASON,
+    apply_business_rules,
+    find_site_outage_trigger,
+)
 
 CREATED = datetime(2026, 11, 4, 9, 0, tzinfo=UTC)
 
@@ -87,6 +93,68 @@ def test_encryption_how_to_is_not_treated_as_ransomware() -> None:
     )
     assert outcome.decision.priority == "P4"
     assert outcome.status == "triaged"
+
+
+SITE_OUTAGES = {
+    "EV-007": (
+        "No internet in the whole Leeds office",
+        "Since 8:40 nobody in the Leeds office has any internet. All 40 staff are affected, Teams calls dropped "
+        "and the phones are down because they run over the internet. The router lights are orange.",
+    ),
+    "EV-008": (
+        "Depot wifi and scanners all down",
+        "Entire depot wifi is down, none of the handheld scanners work and we cannot load the lorries. "
+        "12 drivers waiting in the yard.",
+    ),
+    "EV-011": (
+        "Phones and internet off at both branches",
+        "Hello, just a quick one. The phones and internet seem to be off at both of our branches since about 9. "
+        "Probably nothing serious and we are managing with mobiles.",
+    ),
+}
+
+
+@pytest.mark.parametrize("ticket", sorted(SITE_OUTAGES))
+def test_whole_site_outage_forces_p1_and_keeps_the_team(ticket: str) -> None:
+    subject, body = SITE_OUTAGES[ticket]
+    outcome = run(subject=subject, body=body, category="Network", team="Infrastructure L2", priority="P2")
+    assert outcome.decision.priority == "P1"
+    assert outcome.decision.team == "Infrastructure L2"
+    assert outcome.status == "escalated"
+    assert outcome.alert is True
+    assert rules_fired(outcome)[0] == "site_outage_p1"
+    assert outcome.sla_due_at == CREATED + timedelta(hours=1)
+
+
+def test_site_outage_does_not_fire_when_already_p1() -> None:
+    subject, body = SITE_OUTAGES["EV-007"]
+    outcome = run(subject=subject, body=body, category="Network", team="Infrastructure L2", priority="P1")
+    assert "site_outage_p1" not in rules_fired(outcome)
+
+
+@pytest.mark.parametrize(
+    ("subject", "body"),
+    [
+        ("Home internet down", "My home internet is down so I cannot work from home today."),
+        ("Wifi keeps dropping", "The office wifi drops now and then, usually after lunch."),
+        ("Teams calls failing", "Teams calls keep failing for the sales team this morning."),
+        ("Whole office printer", "The whole office printer is jammed again."),
+    ],
+)
+def test_site_outage_rule_ignores_partial_or_single_user_issues(subject: str, body: str) -> None:
+    outcome = run(subject=subject, body=body, category="Network", team="Service Desk L1", priority="P3")
+    assert outcome.decision.priority == "P3"
+    assert "site_outage_p1" not in rules_fired(outcome)
+
+
+def test_site_outage_rule_fires_on_exactly_the_three_dataset_outages() -> None:
+    dataset = Path(__file__).resolve().parents[1] / "evals" / "dataset.jsonl"
+    fired = {
+        row["id"]
+        for row in map(json.loads, dataset.read_text().splitlines())
+        if find_site_outage_trigger(f"{row['subject']}\n{row['body']}")
+    }
+    assert fired == set(SITE_OUTAGES)
 
 
 def test_injection_suspected_goes_to_human_review() -> None:

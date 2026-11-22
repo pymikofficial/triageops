@@ -16,7 +16,7 @@ Requirement → Architecture → AI → API Integration → Backend → Database
 2. **Protects** the data before any model sees it. Passwords, API keys, tokens, card numbers and National Insurance numbers are redacted, the requester is stored in masked form, and the client IP is replaced by a keyed hash.
 3. **Retrieves** the three most relevant of 30 UK MSP runbooks with hybrid search. Postgres full text search and pgvector similarity (gte-small embeddings, 384 dimensions) are fused by reciprocal rank fusion, with a vector only fallback until the migration is applied.
 4. **Triages** with Claude through forced tool use, so the output always matches a JSON schema. Category, priority, sentiment, team, summary, draft reply, next steps, confidence and an injection flag.
-5. **Applies business rules** in Python after the model. Ransomware is always P1 for Security Ops, security tickets are never below P2, suspected prompt injection goes to human review, and SLA deadlines are computed in code.
+5. **Applies business rules** in Python after the model. Ransomware is always P1 for Security Ops, a whole site without internet, wifi or phones is always P1, security tickets are never below P2, suspected prompt injection goes to human review, and SLA deadlines are computed in code.
 6. **Alerts** a Slack, Discord or Teams channel for P1 and escalated tickets, as an Adaptive Card on Teams, and sweeps for SLA breaches on a schedule.
 7. **Answers questions** about the queue through a copilot chat agent, and exposes the same read-only tools to Claude Desktop, Claude Code or any MCP client through an MCP server.
 8. **Falls back** to deterministic keyword triage if the model is unavailable, so a ticket is never lost.
